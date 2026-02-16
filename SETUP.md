@@ -157,3 +157,92 @@ for i, module in enumerate(plc.modules_w_pins):
 ```
 
 See the [TILOS MacroPlacement source](https://github.com/TILOS-AI-Institute/MacroPlacement/blob/main/CodeElements/Plc_client/plc_client_os.py) for the full PlacementCost API.
+
+## Running Benchmarks
+
+### IBM Benchmarks (Tier 1 — Proxy Cost)
+
+The 17 IBM ICCAD04 benchmarks are in `external/MacroPlacement/Testcases/ICCAD04/`. Run a single benchmark or the full suite using the demo placer:
+
+```bash
+# Single benchmark
+python submissions/examples/greedy_row_placer.py --benchmark ibm01
+
+# All 17 benchmarks with comparison table
+python submissions/examples/greedy_row_placer.py --all
+```
+
+To evaluate your own placer on all benchmarks, follow the same pattern — loop over the benchmark directories:
+
+```python
+BENCHMARKS = [
+    "ibm01", "ibm02", "ibm03", "ibm04", "ibm06", "ibm07", "ibm08", "ibm09",
+    "ibm10", "ibm11", "ibm12", "ibm13", "ibm14", "ibm15", "ibm16", "ibm17", "ibm18",
+]
+
+for name in BENCHMARKS:
+    benchmark, plc = load_benchmark_from_dir(f'external/MacroPlacement/Testcases/ICCAD04/{name}')
+    placement = my_placer.place(benchmark)
+    costs = compute_proxy_cost(placement, benchmark, plc)
+    print(f"{name}: proxy={costs['proxy_cost']:.4f}  overlaps={costs['overlap_count']}")
+```
+
+### NG45 Designs (Tier 2 — OpenROAD Flow)
+
+The top 7 submissions by proxy score will be evaluated through the full OpenROAD PnR flow on NanGate45 designs. These designs are located in the TILOS repository:
+
+```
+external/MacroPlacement/Flows/NanGate45/
+├── ariane133/    # RISC-V core, 133 macros
+├── ariane136/    # RISC-V core, 136 macros
+└── mempool_tile/ # Memory pool, 20 macros
+```
+
+Pre-processed `.pt` versions are available in `benchmarks/processed/public/` for quick loading:
+
+```python
+from benchmark import Benchmark
+
+benchmark = Benchmark.load('benchmarks/processed/public/ariane133_ng45_random.pt')
+```
+
+The OpenROAD flow evaluation measures WNS (worst negative slack), TNS (total negative slack), and Area. Participants do not need to run OpenROAD themselves — the judges will run it on top submissions.
+
+#### Running ORFS Locally (Optional)
+
+If you want to test your placement through the full PnR flow locally, we provide `scripts/evaluate_with_orfs.py` which automates the entire process.
+
+**Prerequisites**: Install [OpenROAD-flow-scripts](https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts) adjacent to this repository:
+
+```bash
+cd ..
+git clone --depth=1 https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts
+cd macro-place-challenge-2026
+```
+
+**Run the ORFS evaluation**:
+
+```bash
+# Evaluate a single NG45 design (uses default placement)
+python scripts/evaluate_with_orfs.py --benchmark ariane133_ng45 --no-docker
+
+# Evaluate with your own placement (saved as a [num_macros, 2] tensor)
+python scripts/evaluate_with_orfs.py --benchmark ariane133_ng45 --no-docker \
+    --placement my_placement.pt
+
+# Evaluate all NG45 designs
+python scripts/evaluate_with_orfs.py --all --no-docker
+
+# Point to a custom ORFS installation
+python scripts/evaluate_with_orfs.py --benchmark ariane133_ng45 \
+    --orfs-root /path/to/OpenROAD-flow-scripts --no-docker
+```
+
+The script will:
+1. Load the benchmark and compute proxy cost
+2. Generate a macro placement TCL script (handling the name mapping between protobuf and ODB formats)
+3. Copy the design config into ORFS with necessary patches
+4. Run the full ORFS flow (synthesis → floorplan → placement → CTS → routing)
+5. Parse and report WNS, TNS, Area, and other metrics
+
+A full ORFS run takes approximately 3-8 hours per design depending on the benchmark and machine.
