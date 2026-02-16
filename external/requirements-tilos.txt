@@ -1,6 +1,0 @@
-# Requirements for TILOS MacroPlacement evaluator (optional)
-# These are only needed if you want to use the ground truth evaluator
-
-absl-py>=1.0.0
-matplotlib>=3.3.0
-numpy>=1.19.0
