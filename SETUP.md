@@ -1,104 +1,159 @@
-# Setup Instructions
+# Setup & API Reference
 
-## Quick Start with UV
+## Installation
 
 ```bash
-# Create virtual environment
+# Clone the repository
+git clone https://github.com/partcleda/macro-place-challenge-2026.git
+cd macro-place-challenge-2026
+
+# Initialize TILOS MacroPlacement submodule (required for evaluation)
+git submodule update --init external/MacroPlacement
+
+# Create virtual environment and install dependencies
 uv venv
-
-# Install dependencies
 uv pip install -r requirements.txt
-
-# Test the infrastructure
-source .venv/bin/activate
-pytest
 ```
 
-## What's Working
+## Project Structure
 
-The PyTorch infrastructure is fully operational:
-
-- ✅ **Loader** (`src/loader.py`): Extracts macro data from PlacementCost into PyTorch tensors
-- ✅ **Benchmark** (`src/benchmark.py`): Pure tensor representation (macros as tensors, nets in PlacementCost)
-- ✅ **Objective** (`src/objective.py`): Computes all three cost components via PlacementCost
-  - **Wirelength**: 0.064080 (uses 7269 nets from PlacementCost)
-  - **Density**: 0.811984 (top 10% grid cells)
-  - **Congestion**: 1.136852 (top 5% routing segments with smoothing)
-  - **Deterministic**: All costs reproducible to 10 decimal places
-- ✅ **Utils** (`src/utils.py`): Validation and visualization helpers
-
-### Congestion Fix
-
-Fixed a boundary condition bug in PlacementCost's `__get_grid_cell_location` via monkey-patch. When pins are at canvas boundaries, the original code computed out-of-bounds grid cells. The fix clamps row/col values to valid ranges.
-
-**Note on Nets**: The net connectivity is stored in PlacementCost but not extracted into PyTorch tensors. This is fine for cost computation but may need extraction if participants want to write custom net-based algorithms in pure PyTorch.
-
-**Note on Overlaps**:
-- The **density cost** implicitly penalizes overlaps (overlapping macros cause grid cell density > 1.0)
-- The **objective function can be computed** for overlapping placements (they just score poorly)
-- The **SA baseline enforces zero overlap** as a hard constraint via `IsFeasible()`
-- Our validation now checks for overlaps by default (can disable with `check_overlaps=False`)
-
-## Testing
-
-```bash
-# Run all tests
-pytest
-
-# Run with verbose output
-pytest -v
-
-# Run specific test
-pytest test/test_infrastructure.py::test_compute_costs -v
-
-# Debug scripts (if issues arise)
-python test/debug_congestion.py
-python test/check_nets.py
+```
+├── src/
+│   ├── loader.py       # Load benchmarks from ICCAD04 format
+│   ├── benchmark.py    # Benchmark dataclass (PyTorch tensors)
+│   ├── objective.py    # Proxy cost computation
+│   └── utils.py        # Validation and visualization
+├── submissions/
+│   └── examples/       # Example placers (greedy_row_placer.py, simple_random_placer.py)
+├── external/
+│   └── MacroPlacement/ # TILOS evaluator and ICCAD04 testcases
+├── benchmarks/
+│   └── processed/      # Pre-processed .pt benchmark files
+└── SETUP.md            # This file
 ```
 
-## Exporting to DEF Format
+## API Reference
 
-You can export placement results to industry-standard DEF (Design Exchange Format):
+### Loading a Benchmark
 
 ```python
+import sys
+sys.path.insert(0, 'src')
 from loader import load_benchmark_from_dir
-from def_writer import write_def
 
-# Load benchmark
-flows_dir = 'external/MacroPlacement/Flows/NanGate45/ariane133/netlist/output_CT_Grouping'
-benchmark, plc = load_benchmark_from_dir(flows_dir)
-
-# ... run your placer and update positions in plc ...
-
-# Export to DEF
-write_def(plc, 'output.def', design_name='ariane133')
+benchmark, plc = load_benchmark_from_dir('external/MacroPlacement/Testcases/ICCAD04/ibm01')
 ```
 
-The DEF file includes:
-- Die area
-- Row definitions (for standard cells)
-- Component positions (macros and standard cells)
-- I/O pins
-- Net connectivity
+Returns:
+- `benchmark`: A `Benchmark` dataclass with PyTorch tensors
+- `plc`: A `PlacementCost` object (needed for cost computation)
 
-This allows you to:
-- Import results into commercial EDA tools (Innovus, ICC2)
-- Visualize with OpenROAD
-- Run detailed routing and analysis
+### Benchmark Object
 
-## Modern Benchmarks
+The `Benchmark` dataclass contains:
 
-The competition uses modern chip designs from the TILOS MacroPlacement repository:
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | `str` | Benchmark name (e.g., "ibm01") |
+| `canvas_width` | `float` | Canvas width in microns |
+| `canvas_height` | `float` | Canvas height in microns |
+| `num_macros` | `int` | Number of hard macros |
+| `macro_positions` | `Tensor [N, 2]` | (x, y) center positions |
+| `macro_sizes` | `Tensor [N, 2]` | (width, height) of each macro |
+| `macro_fixed` | `Tensor [N]` | Boolean mask of fixed macros |
+| `macro_names` | `List[str]` | Macro names for debugging |
+| `num_nets` | `int` | Number of nets |
+| `grid_rows`, `grid_cols` | `int` | Grid dimensions for density/congestion |
 
-- **ariane133/136**: RISC-V processor cores
-- **nvdla**: NVIDIA Deep Learning Accelerator
-- **mempool_tile**: Memory pooling architecture
+Helper methods:
+- `benchmark.get_movable_mask()` — returns `~macro_fixed`
+- `benchmark.save(path)` / `Benchmark.load(path)` — serialize to/from `.pt` files
 
-These benchmarks are already converted to PyTorch tensor format in `benchmarks/processed/public/`.
+### Computing Proxy Cost
 
-To regenerate:
+```python
+from objective import compute_proxy_cost
 
-```bash
-python scripts/convert_modern_benchmarks.py
-python scripts/compute_initial_baselines.py
+costs = compute_proxy_cost(placement, benchmark, plc)
 ```
+
+**Input**: `placement` — a `[num_macros, 2]` tensor of (x, y) center positions.
+
+**Output**: A dictionary with:
+
+| Key | Description |
+|-----|-------------|
+| `proxy_cost` | Weighted sum: 1.0 × WL + 0.5 × density + 0.5 × congestion |
+| `wirelength_cost` | Normalized HPWL across all nets |
+| `density_cost` | Top 10% grid cell density |
+| `congestion_cost` | Top 5% routing congestion with smoothing |
+| `overlap_count` | Number of overlapping macro pairs |
+| `total_overlap_area` | Total overlap area in μm² |
+| `overlap_ratio` | Fraction of macros involved in overlaps |
+
+### Validating a Placement
+
+```python
+from utils import validate_placement
+
+is_valid, violations = validate_placement(placement, benchmark)
+```
+
+Checks:
+- Correct tensor shape
+- No NaN/Inf values
+- All macros within canvas bounds
+- Fixed macros at original positions
+- Zero macro-to-macro overlaps
+
+### Visualizing a Placement
+
+```python
+from utils import visualize_placement
+
+visualize_placement(placement, benchmark, save_path='output.png')
+```
+
+## Writing a Placer
+
+Your placer takes a `Benchmark` and returns a `[num_macros, 2]` tensor of positions:
+
+```python
+import torch
+from benchmark import Benchmark
+
+class MyPlacer:
+    def place(self, benchmark: Benchmark) -> torch.Tensor:
+        placement = benchmark.macro_positions.clone()
+        movable = benchmark.get_movable_mask()
+
+        # Your algorithm here — modify positions for movable macros
+        # ...
+
+        return placement
+```
+
+Key constraints:
+- Positions are **center coordinates** (not corners)
+- Fixed macros must stay at their original positions
+- All macros must be fully within canvas bounds
+- **Zero overlaps** required (automatic disqualification otherwise)
+
+See `submissions/examples/greedy_row_placer.py` for a complete working example.
+
+## Net Connectivity
+
+Net connectivity is stored inside the `PlacementCost` object (`plc`), not in the `Benchmark` tensors. The proxy cost computation uses it automatically.
+
+If you need direct access to net data for your algorithm (e.g., for a GNN), you can access it through the PlacementCost API:
+
+```python
+# Number of nets
+print(plc.net_cnt)
+
+# Access individual modules and their connections
+for i, module in enumerate(plc.modules_w_pins):
+    print(module.get_name(), module.get_pos())
+```
+
+See the [TILOS MacroPlacement source](https://github.com/TILOS-AI-Institute/MacroPlacement/blob/main/CodeElements/Plc_client/plc_client_os.py) for the full PlacementCost API.
