@@ -42,7 +42,7 @@ For example, the **ibm01** benchmark has:
 - The deadline for submissions is May 4, 2026, 11:59 pacific.
 - All teams may only submit one algorithm.
 - **All winning implementations must be made open-source under Apache 2.0 or GPL**
-- [Submission Link](https://github.com/partcleda/macro-place-challenge-2026)
+- All submissions must be registered via this [Submission Link](https://github.com/partcleda/macro-place-challenge-2026).
 
 ## Additional Rules
 
