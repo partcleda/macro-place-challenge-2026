@@ -18,7 +18,7 @@ from pathlib import Path
 
 from macro_place.loader import load_benchmark_from_dir
 from macro_place.objective import compute_proxy_cost
-from macro_place.utils import validate_placement
+from macro_place.utils import validate_placement, visualize_placement
 
 # ── IBM ICCAD04 benchmark list ──────────────────────────────────────────────
 
@@ -140,6 +140,8 @@ def evaluate_benchmark(placer, name: str, testcase_root: str) -> dict:
         "valid": is_valid,
         "sa_baseline": SA_BASELINES.get(name),
         "replace_baseline": REPLACE_BASELINES.get(name),
+        "placement": placement,
+        "benchmark": benchmark,
     }
 
 
@@ -217,6 +219,11 @@ def main():
         action="store_true",
         help="Run on all 17 IBM benchmarks.",
     )
+    parser.add_argument(
+        "--vis",
+        action="store_true",
+        help="Visualize each placement after evaluation (saves to vis/<benchmark>.png).",
+    )
     args = parser.parse_args()
 
     # ── resolve paths ────────────────────────────────────────────────────
@@ -255,6 +262,12 @@ def main():
             f"(wl={result['wirelength']:.3f} den={result['density']:.3f} cong={result['congestion']:.3f})  "
             f"{status}  [{result['runtime']:.2f}s]"
         )
+
+        if args.vis:
+            vis_dir = Path("vis")
+            vis_dir.mkdir(exist_ok=True)
+            save_path = str(vis_dir / f"{name}.png")
+            visualize_placement(result["placement"], result["benchmark"], save_path=save_path)
 
     if len(results) > 1:
         _print_summary_table(results)

@@ -4,8 +4,8 @@ Benchmark data structure for macro placement.
 Pure PyTorch tensor representation of placement benchmarks.
 """
 
-from dataclasses import dataclass
-from typing import List, Optional
+from dataclasses import dataclass, field
+from typing import List
 import torch
 
 
@@ -46,7 +46,7 @@ class Benchmark:
     vroutes_per_micron: float = 12.605  # Vertical routing tracks per micron
 
     # PlacementCost mapping (for objective computation)
-    hard_macro_indices: List[int] = []  # Map tensor index → PlacementCost module index
+    hard_macro_indices: List[int] = field(default_factory=list)  # Map tensor index → PlacementCost module index
 
     def __post_init__(self):
         """Validate tensor shapes."""
