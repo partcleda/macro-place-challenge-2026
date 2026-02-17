@@ -114,10 +114,14 @@ pytest
 
 ```bash
 # Run the greedy row placer on ibm01
-python submissions/examples/greedy_row_placer.py
+uv run evaluate submissions/examples/greedy_row_placer.py
 
 # Run on all 17 IBM benchmarks
-python submissions/examples/greedy_row_placer.py --all
+uv run evaluate submissions/examples/greedy_row_placer.py --all
+
+# Visualize the result
+uv run evaluate submissions/examples/greedy_row_placer.py --vis
+uv run evaluate submissions/examples/greedy_row_placer.py --all --vis
 ```
 
 Running on all benchmarks produces a summary like:
