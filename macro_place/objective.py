@@ -5,22 +5,17 @@ Wraps PlacementCost methods to compute wirelength, density, and congestion costs
 Also computes overlap metrics for validation and analysis.
 """
 
-import sys
 import torch
 import math
 from typing import Dict, Optional
-from pathlib import Path
 
-# Add external/MacroPlacement to path
-_REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "external" / "MacroPlacement" / "CodeElements" / "Plc_client"))
-
-from plc_client_os import PlacementCost
-from benchmark import Benchmark
+from macro_place._plc import PlacementCost
+from macro_place.benchmark import Benchmark
 
 
 # Monkey-patch PlacementCost to fix boundary bug in __get_grid_cell_location
 _original_get_grid_cell_location = PlacementCost._PlacementCost__get_grid_cell_location
+
 
 def _patched_get_grid_cell_location(self, x_pos, y_pos):
     """Fixed version with bounds clamping."""
@@ -35,12 +30,12 @@ def _patched_get_grid_cell_location(self, x_pos, y_pos):
 
     return row, col
 
+
 PlacementCost._PlacementCost__get_grid_cell_location = _patched_get_grid_cell_location
 
 
 def compute_overlap_metrics(
-    placement: torch.Tensor,
-    benchmark: Benchmark
+    placement: torch.Tensor, benchmark: Benchmark
 ) -> Dict[str, float]:
     """
     Compute overlap metrics for macro placement.
@@ -63,11 +58,11 @@ def compute_overlap_metrics(
 
     if num_macros <= 1:
         return {
-            'overlap_count': 0,
-            'total_overlap_area': 0.0,
-            'max_overlap_area': 0.0,
-            'num_macros_with_overlaps': 0,
-            'overlap_ratio': 0.0,
+            "overlap_count": 0,
+            "total_overlap_area": 0.0,
+            "max_overlap_area": 0.0,
+            "num_macros_with_overlaps": 0,
+            "overlap_ratio": 0.0,
         }
 
     # Extract positions and sizes
@@ -108,11 +103,11 @@ def compute_overlap_metrics(
     overlap_ratio = num_macros_with_overlaps / num_macros if num_macros > 0 else 0.0
 
     return {
-        'overlap_count': overlap_count,
-        'total_overlap_area': total_overlap_area,
-        'max_overlap_area': max_overlap_area,
-        'num_macros_with_overlaps': num_macros_with_overlaps,
-        'overlap_ratio': overlap_ratio,
+        "overlap_count": overlap_count,
+        "total_overlap_area": total_overlap_area,
+        "max_overlap_area": max_overlap_area,
+        "num_macros_with_overlaps": num_macros_with_overlaps,
+        "overlap_ratio": overlap_ratio,
     }
 
 
@@ -120,7 +115,7 @@ def compute_proxy_cost(
     placement: torch.Tensor,
     benchmark: Benchmark,
     plc: PlacementCost,
-    weights: Optional[Dict[str, float]] = None
+    weights: Optional[Dict[str, float]] = None,
 ) -> Dict[str, float]:
     """
     Compute proxy cost using PlacementCost's ground truth evaluator.
@@ -149,7 +144,7 @@ def compute_proxy_cost(
         }
     """
     if weights is None:
-        weights = {'wirelength': 1.0, 'density': 0.5, 'congestion': 0.5}
+        weights = {"wirelength": 1.0, "density": 0.5, "congestion": 0.5}
 
     # Set placement in PlacementCost object (if different from current)
     _set_placement(plc, placement, benchmark)
@@ -161,28 +156,24 @@ def compute_proxy_cost(
 
     # Weighted sum (matching ISPD 2023 paper convention)
     proxy = (
-        weights['wirelength'] * wirelength_cost +
-        weights['density'] * density_cost +
-        weights['congestion'] * congestion_cost
+        weights["wirelength"] * wirelength_cost
+        + weights["density"] * density_cost
+        + weights["congestion"] * congestion_cost
     )
 
     # Compute overlap metrics
     overlap_metrics = compute_overlap_metrics(placement, benchmark)
 
     return {
-        'proxy_cost': proxy,
-        'wirelength_cost': wirelength_cost,
-        'density_cost': density_cost,
-        'congestion_cost': congestion_cost,
+        "proxy_cost": proxy,
+        "wirelength_cost": wirelength_cost,
+        "density_cost": density_cost,
+        "congestion_cost": congestion_cost,
         **overlap_metrics,  # Add all overlap metrics
     }
 
 
-def _set_placement(
-    plc: PlacementCost,
-    placement: torch.Tensor,
-    benchmark: Benchmark
-):
+def _set_placement(plc: PlacementCost, placement: torch.Tensor, benchmark: Benchmark):
     """
     Set macro positions in PlacementCost object.
 

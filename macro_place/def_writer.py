@@ -5,15 +5,9 @@ This allows exporting placement results to industry-standard DEF format
 for use with EDA tools like Innovus, ICC2, OpenROAD, etc.
 """
 
-import sys
-from pathlib import Path
 from typing import Optional
 
-# Add external/MacroPlacement to path
-_REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "external" / "MacroPlacement" / "CodeElements" / "Plc_client"))
-
-from plc_client_os import PlacementCost
+from macro_place._plc import PlacementCost
 
 
 def write_def(plc: PlacementCost, def_file: str, design_name: Optional[str] = None):
@@ -218,9 +212,7 @@ def _write_nets(fp, plc: PlacementCost):
 
 # Example usage
 if __name__ == "__main__":
-    import sys
-    sys.path.insert(0, str(Path(__file__).parent))
-    from loader import load_benchmark_from_dir
+    from macro_place.loader import load_benchmark_from_dir
 
     # Load a benchmark
     benchmark, plc = load_benchmark_from_dir("external/MacroPlacement/Testcases/ICCAD04/ibm01")

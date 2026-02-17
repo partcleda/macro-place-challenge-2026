@@ -16,10 +16,10 @@ A minimal working example that demonstrates the complete workflow:
 
 ```bash
 # Make sure you're in the repository root
-cd /path/to/partcl-marco-place-challenge
+cd /path/to/macro-place-challenge-2026
 
-# Activate environment
-source .venv/bin/activate
+# Install the package (one-time setup)
+uv sync
 
 # Run the example
 python submissions/examples/simple_random_placer.py
@@ -68,7 +68,7 @@ The `SimpleRandomPlacer` class:
 ### Minimal Interface
 
 ```python
-from benchmark import Benchmark
+from macro_place.benchmark import Benchmark
 import torch
 
 class MyPlacer:
@@ -107,9 +107,9 @@ class MyPlacer:
 ### Complete Workflow
 
 ```python
-from loader import load_benchmark_from_dir
-from objective import compute_proxy_cost
-from utils import validate_placement
+from macro_place.loader import load_benchmark_from_dir
+from macro_place.objective import compute_proxy_cost
+from macro_place.utils import validate_placement
 
 # 1. Load benchmark
 benchmark, plc = load_benchmark_from_dir("external/MacroPlacement/Testcases/ICCAD04/ibm01")

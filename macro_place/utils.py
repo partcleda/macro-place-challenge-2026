@@ -4,13 +4,12 @@ Utility functions for placement validation and visualization.
 
 import torch
 from typing import Tuple, List, Optional
-from benchmark import Benchmark
+
+from macro_place.benchmark import Benchmark
 
 
 def validate_placement(
-    placement: torch.Tensor,
-    benchmark: Benchmark,
-    check_overlaps: bool = True
+    placement: torch.Tensor, benchmark: Benchmark, check_overlaps: bool = True
 ) -> Tuple[bool, List[str]]:
     """
     Validate placement legality.
@@ -34,7 +33,9 @@ def validate_placement(
 
     # Check shape
     if placement.shape != (benchmark.num_macros, 2):
-        violations.append(f"Shape mismatch: expected {(benchmark.num_macros, 2)}, got {placement.shape}")
+        violations.append(
+            f"Shape mismatch: expected {(benchmark.num_macros, 2)}, got {placement.shape}"
+        )
         return False, violations
 
     # Check for NaN/Inf
@@ -92,9 +93,7 @@ def validate_placement(
 
 
 def visualize_placement(
-    placement: torch.Tensor,
-    benchmark: Benchmark,
-    save_path: Optional[str] = None
+    placement: torch.Tensor, benchmark: Benchmark, save_path: Optional[str] = None
 ):
     """
     Visualize placement (requires matplotlib).
@@ -114,10 +113,16 @@ def visualize_placement(
     fig, ax = plt.subplots(figsize=(10, 10))
 
     # Draw canvas
-    ax.add_patch(Rectangle(
-        (0, 0), benchmark.canvas_width, benchmark.canvas_height,
-        fill=False, edgecolor='black', linewidth=2
-    ))
+    ax.add_patch(
+        Rectangle(
+            (0, 0),
+            benchmark.canvas_width,
+            benchmark.canvas_height,
+            fill=False,
+            edgecolor="black",
+            linewidth=2,
+        )
+    )
 
     # Draw macros
     for i in range(benchmark.num_macros):
@@ -127,32 +132,40 @@ def visualize_placement(
         x_min = x - w / 2
         y_min = y - h / 2
 
-        color = 'red' if benchmark.macro_fixed[i] else 'blue'
+        color = "red" if benchmark.macro_fixed[i] else "blue"
         alpha = 0.3 if benchmark.macro_fixed[i] else 0.5
 
-        ax.add_patch(Rectangle(
-            (x_min, y_min), w, h,
-            fill=True, facecolor=color, alpha=alpha,
-            edgecolor='black', linewidth=0.5
-        ))
+        ax.add_patch(
+            Rectangle(
+                (x_min, y_min),
+                w,
+                h,
+                fill=True,
+                facecolor=color,
+                alpha=alpha,
+                edgecolor="black",
+                linewidth=0.5,
+            )
+        )
 
     ax.set_xlim(0, benchmark.canvas_width)
     ax.set_ylim(0, benchmark.canvas_height)
-    ax.set_aspect('equal')
-    ax.set_xlabel('X (μm)')
-    ax.set_ylabel('Y (μm)')
-    ax.set_title(f'Placement: {benchmark.name}')
+    ax.set_aspect("equal")
+    ax.set_xlabel("X (μm)")
+    ax.set_ylabel("Y (μm)")
+    ax.set_title(f"Placement: {benchmark.name}")
 
     # Add legend
     from matplotlib.patches import Patch
+
     legend_elements = [
-        Patch(facecolor='blue', alpha=0.5, edgecolor='black', label='Movable macros'),
-        Patch(facecolor='red', alpha=0.3, edgecolor='black', label='Fixed macros')
+        Patch(facecolor="blue", alpha=0.5, edgecolor="black", label="Movable macros"),
+        Patch(facecolor="red", alpha=0.3, edgecolor="black", label="Fixed macros"),
     ]
-    ax.legend(handles=legend_elements, loc='upper right')
+    ax.legend(handles=legend_elements, loc="upper right")
 
     if save_path:
-        plt.savefig(save_path, dpi=150, bbox_inches='tight')
+        plt.savefig(save_path, dpi=150, bbox_inches="tight")
         print(f"Saved visualization to {save_path}")
     else:
         plt.show()

@@ -5,21 +5,16 @@ Leverages the existing MacroPlacement parser instead of reimplementing.
 """
 
 import os
-import sys
 import torch
-from typing import Optional
-from pathlib import Path
+from typing import Optional, Tuple
 
-# Add external/MacroPlacement to path
-_REPO_ROOT = Path(__file__).parent.parent
-sys.path.insert(0, str(_REPO_ROOT / "external" / "MacroPlacement" / "CodeElements" / "Plc_client"))
-
-from plc_client_os import PlacementCost
-from benchmark import Benchmark
-from typing import Tuple
+from macro_place._plc import PlacementCost
+from macro_place.benchmark import Benchmark
 
 
-def load_benchmark(netlist_file: str, plc_file: Optional[str] = None) -> Tuple[Benchmark, PlacementCost]:
+def load_benchmark(
+    netlist_file: str, plc_file: Optional[str] = None
+) -> Tuple[Benchmark, PlacementCost]:
     """
     Load benchmark from ICCAD04 format using PlacementCost parser.
 
@@ -81,7 +76,7 @@ def load_benchmark(netlist_file: str, plc_file: Optional[str] = None) -> Tuple[B
     # into tensor format is complex due to pins/sinks structure. Since cost computation
     # is handled by PlacementCost directly, we don't strictly need them in tensor form.
     # For now, just capture the count for display purposes.
-    num_nets = int(plc.net_cnt) if hasattr(plc, 'net_cnt') else 0
+    num_nets = int(plc.net_cnt) if hasattr(plc, "net_cnt") else 0
 
     # TODO: If needed for participant algorithms, extract nets from PlacementCost:
     # - Iterate through hard_macro_pin_indices and soft_macro_pin_indices
@@ -90,7 +85,11 @@ def load_benchmark(netlist_file: str, plc_file: Optional[str] = None) -> Tuple[B
     net_nodes = []
     net_weights = []
 
-    net_weights_tensor = torch.tensor(net_weights, dtype=torch.float32) if net_weights else torch.zeros(num_nets, dtype=torch.float32)
+    net_weights_tensor = (
+        torch.tensor(net_weights, dtype=torch.float32)
+        if net_weights
+        else torch.zeros(num_nets, dtype=torch.float32)
+    )
 
     # Create Benchmark object
     benchmark = Benchmark(

@@ -10,26 +10,28 @@ cd macro-place-challenge-2026
 # Initialize TILOS MacroPlacement submodule (required for evaluation)
 git submodule update --init external/MacroPlacement
 
-# Create virtual environment and install dependencies
-uv venv
-uv pip install -r requirements.txt
+# Create virtual environment and install the package (editable)
+uv sync
 ```
 
 ## Project Structure
 
 ```
-├── src/
-│   ├── loader.py       # Load benchmarks from ICCAD04 format
-│   ├── benchmark.py    # Benchmark dataclass (PyTorch tensors)
-│   ├── objective.py    # Proxy cost computation
-│   └── utils.py        # Validation and visualization
+├── macro_place/            # Installable Python package
+│   ├── __init__.py
+│   ├── benchmark.py        # Benchmark dataclass (PyTorch tensors)
+│   ├── loader.py           # Load benchmarks from ICCAD04 format
+│   ├── objective.py        # Proxy cost computation
+│   ├── utils.py            # Validation and visualization
+│   └── def_writer.py       # DEF file export
 ├── submissions/
-│   └── examples/       # Example placers (greedy_row_placer.py, simple_random_placer.py)
+│   └── examples/           # Example placers (greedy_row_placer.py, simple_random_placer.py)
 ├── external/
-│   └── MacroPlacement/ # TILOS evaluator and ICCAD04 testcases
+│   └── MacroPlacement/     # TILOS evaluator and ICCAD04 testcases
 ├── benchmarks/
-│   └── processed/      # Pre-processed .pt benchmark files
-└── SETUP.md            # This file
+│   └── processed/          # Pre-processed .pt benchmark files
+├── pyproject.toml          # Package & dependency config (used by uv)
+└── SETUP.md                # This file
 ```
 
 ## API Reference
@@ -37,9 +39,7 @@ uv pip install -r requirements.txt
 ### Loading a Benchmark
 
 ```python
-import sys
-sys.path.insert(0, 'src')
-from loader import load_benchmark_from_dir
+from macro_place.loader import load_benchmark_from_dir
 
 benchmark, plc = load_benchmark_from_dir('external/MacroPlacement/Testcases/ICCAD04/ibm01')
 ```
@@ -72,7 +72,7 @@ Helper methods:
 ### Computing Proxy Cost
 
 ```python
-from objective import compute_proxy_cost
+from macro_place.objective import compute_proxy_cost
 
 costs = compute_proxy_cost(placement, benchmark, plc)
 ```
@@ -94,7 +94,7 @@ costs = compute_proxy_cost(placement, benchmark, plc)
 ### Validating a Placement
 
 ```python
-from utils import validate_placement
+from macro_place.utils import validate_placement
 
 is_valid, violations = validate_placement(placement, benchmark)
 ```
@@ -109,7 +109,7 @@ Checks:
 ### Visualizing a Placement
 
 ```python
-from utils import visualize_placement
+from macro_place.utils import visualize_placement
 
 visualize_placement(placement, benchmark, save_path='output.png')
 ```
@@ -120,7 +120,7 @@ Your placer takes a `Benchmark` and returns a `[num_macros, 2]` tensor of positi
 
 ```python
 import torch
-from benchmark import Benchmark
+from macro_place.benchmark import Benchmark
 
 class MyPlacer:
     def place(self, benchmark: Benchmark) -> torch.Tensor:
@@ -166,15 +166,18 @@ The 17 IBM ICCAD04 benchmarks are in `external/MacroPlacement/Testcases/ICCAD04/
 
 ```bash
 # Single benchmark
-python submissions/examples/greedy_row_placer.py --benchmark ibm01
+uv run evaluate submissions/examples/greedy_row_placer.py -b ibm01
 
 # All 17 benchmarks with comparison table
-python submissions/examples/greedy_row_placer.py --all
+uv run evaluate submissions/examples/greedy_row_placer.py --all
 ```
 
 To evaluate your own placer on all benchmarks, follow the same pattern — loop over the benchmark directories:
 
 ```python
+from macro_place.loader import load_benchmark_from_dir
+from macro_place.objective import compute_proxy_cost
+
 BENCHMARKS = [
     "ibm01", "ibm02", "ibm03", "ibm04", "ibm06", "ibm07", "ibm08", "ibm09",
     "ibm10", "ibm11", "ibm12", "ibm13", "ibm14", "ibm15", "ibm16", "ibm17", "ibm18",
@@ -201,7 +204,7 @@ external/MacroPlacement/Flows/NanGate45/
 Pre-processed `.pt` versions are available in `benchmarks/processed/public/` for quick loading:
 
 ```python
-from benchmark import Benchmark
+from macro_place.benchmark import Benchmark
 
 benchmark = Benchmark.load('benchmarks/processed/public/ariane133_ng45_random.pt')
 ```

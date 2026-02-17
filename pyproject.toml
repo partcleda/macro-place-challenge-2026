@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0", "wheel"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "marco-place"
+name = "macro-place"
 version = "0.1.0"
 description = "Macro Placement Challenge - Beat Kahng's benchmarks for $20K"
 readme = "README.md"
@@ -23,6 +23,7 @@ classifiers = [
     "Programming Language :: Python :: 3.9",
     "Programming Language :: Python :: 3.10",
     "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
     "Topic :: Scientific/Engineering :: Electronic Design Automation (EDA)",
 ]
 
@@ -31,6 +32,7 @@ dependencies = [
     "numpy>=1.20.0",
     "matplotlib>=3.5.0",
     "tqdm>=4.65.0",
+    "absl-py>=1.0.0",
 ]
 
 [project.optional-dependencies]
@@ -38,28 +40,30 @@ dev = [
     "pytest>=7.0.0",
     "pytest-cov>=4.0.0",
     "black>=23.0.0",
-    "flake8>=6.0.0",
+    "flake8>=6.0.0; python_version >= '3.8.1'",
 ]
 baselines = [
     "torch-geometric>=2.3.0",
     "scipy>=1.10.0",
 ]
 
+[project.scripts]
+evaluate = "macro_place.evaluate:main"
+
 [project.urls]
 Homepage = "https://github.com/partcl/partcl-marco-place-challenge"
 Repository = "https://github.com/partcl/partcl-marco-place-challenge"
 Issues = "https://github.com/partcl/partcl-marco-place-challenge/issues"
 
-[tool.setuptools]
-packages = ["marco_place"]
-package-dir = {"" = "src"}
+[tool.setuptools.packages.find]
+include = ["macro_place*"]
 
 [tool.setuptools.package-data]
-marco_place = ["py.typed"]
+macro_place = ["py.typed"]
 
 [tool.black]
 line-length = 100
-target-version = ["py38", "py39", "py310", "py311"]
+target-version = ["py38", "py39", "py310", "py311", "py312"]
 
 [tool.pytest.ini_options]
 testpaths = ["test"]
