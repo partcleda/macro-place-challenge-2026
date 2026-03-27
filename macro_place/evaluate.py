@@ -16,13 +16,13 @@ import sys
 import time
 from pathlib import Path
 
-from macro_place.loader import load_benchmark_from_dir
+from macro_place.loader import load_benchmark, load_benchmark_from_dir
 from macro_place.objective import compute_proxy_cost
 from macro_place.utils import validate_placement, visualize_placement
 
 # ── IBM ICCAD04 benchmark list ──────────────────────────────────────────────
 
-BENCHMARKS = [
+IBM_BENCHMARKS = [
     "ibm01",
     "ibm02",
     "ibm03",
@@ -41,6 +41,17 @@ BENCHMARKS = [
     "ibm17",
     "ibm18",
 ]
+
+# ── NG45 commercial designs ────────────────────────────────────────────────
+
+NG45_BENCHMARKS = {
+    "ariane133": "external/MacroPlacement/Flows/NanGate45/ariane133/netlist/output_CT_Grouping",
+    "ariane136": "external/MacroPlacement/Flows/NanGate45/ariane136/netlist/output_CT_Grouping",
+    "mempool_tile": "external/MacroPlacement/Flows/NanGate45/mempool_tile/netlist/output_CT_Grouping",
+    "nvdla": "external/MacroPlacement/Flows/NanGate45/nvdla/netlist/output_CT_Grouping",
+}
+
+BENCHMARKS = IBM_BENCHMARKS
 
 # ── Published baselines ─────────────────────────────────────────────────────
 
@@ -117,10 +128,15 @@ def _load_placer(path: Path):
 # ── Single-benchmark evaluation ─────────────────────────────────────────────
 
 
-def evaluate_benchmark(placer, name: str, testcase_root: str) -> dict:
+def evaluate_benchmark(placer, name: str, testcase_root: str, ng45_dir: str = None) -> dict:
     """Run *placer* on a single benchmark and return a results dict."""
-    benchmark_dir = f"{testcase_root}/{name}"
-    benchmark, plc = load_benchmark_from_dir(benchmark_dir)
+    if ng45_dir:
+        netlist_file = f"{ng45_dir}/netlist.pb.txt"
+        plc_file = f"{ng45_dir}/initial.plc"
+        benchmark, plc = load_benchmark(netlist_file, plc_file)
+    else:
+        benchmark_dir = f"{testcase_root}/{name}"
+        benchmark, plc = load_benchmark_from_dir(benchmark_dir)
 
     start = time.time()
     placement = placer.place(benchmark)
@@ -150,43 +166,74 @@ def evaluate_benchmark(placer, name: str, testcase_root: str) -> dict:
 
 def _print_summary_table(results):
     """Print a multi-benchmark comparison table."""
+    has_baselines = any(r["sa_baseline"] is not None for r in results)
+
     print()
     print("-" * 80)
-    print(
-        f"{'Benchmark':>8}  {'Proxy':>8}  {'SA':>8}  {'RePlAce':>8}"
-        f"  {'vs SA':>8}  {'vs RePlAce':>10}  {'Overlaps':>8}"
-    )
+    if has_baselines:
+        print(
+            f"{'Benchmark':>13}  {'Proxy':>8}  {'SA':>8}  {'RePlAce':>8}"
+            f"  {'vs SA':>8}  {'vs RePlAce':>10}  {'Overlaps':>8}"
+        )
+    else:
+        print(
+            f"{'Benchmark':>13}  {'Proxy':>8}  {'WL':>8}  {'Density':>8}"
+            f"  {'Congestion':>10}  {'Overlaps':>8}"
+        )
     print("-" * 80)
 
     for r in results:
-        vs_sa = (
-            ((r["sa_baseline"] - r["proxy_cost"]) / r["sa_baseline"] * 100)
-            if r["sa_baseline"]
-            else 0
-        )
-        vs_rep = (
-            ((r["replace_baseline"] - r["proxy_cost"]) / r["replace_baseline"] * 100)
-            if r["replace_baseline"]
-            else 0
-        )
-        print(
-            f"{r['name']:>8}  {r['proxy_cost']:>8.4f}"
-            f"  {r['sa_baseline']:>8.4f}  {r['replace_baseline']:>8.4f}"
-            f"  {vs_sa:>+7.1f}%  {vs_rep:>+9.1f}%  {r['overlaps']:>8}"
-        )
+        if has_baselines:
+            vs_sa = (
+                ((r["sa_baseline"] - r["proxy_cost"]) / r["sa_baseline"] * 100)
+                if r["sa_baseline"]
+                else 0
+            )
+            vs_rep = (
+                ((r["replace_baseline"] - r["proxy_cost"]) / r["replace_baseline"] * 100)
+                if r["replace_baseline"]
+                else 0
+            )
+            sa_str = f"{r['sa_baseline']:>8.4f}" if r["sa_baseline"] else f"{'—':>8}"
+            rep_str = f"{r['replace_baseline']:>8.4f}" if r["replace_baseline"] else f"{'—':>8}"
+            print(
+                f"{r['name']:>13}  {r['proxy_cost']:>8.4f}"
+                f"  {sa_str}  {rep_str}"
+                f"  {vs_sa:>+7.1f}%  {vs_rep:>+9.1f}%  {r['overlaps']:>8}"
+            )
+        else:
+            print(
+                f"{r['name']:>13}  {r['proxy_cost']:>8.4f}"
+                f"  {r['wirelength']:>8.3f}  {r['density']:>8.3f}"
+                f"  {r['congestion']:>10.3f}  {r['overlaps']:>8}"
+            )
 
     avg_proxy = sum(r["proxy_cost"] for r in results) / len(results)
-    avg_sa = sum(r["sa_baseline"] for r in results) / len(results)
-    avg_rep = sum(r["replace_baseline"] for r in results) / len(results)
     total_overlaps = sum(r["overlaps"] for r in results)
     total_runtime = sum(r["runtime"] for r in results)
 
-    print("-" * 80)
-    print(
-        f"{'AVG':>8}  {avg_proxy:>8.4f}  {avg_sa:>8.4f}  {avg_rep:>8.4f}"
-        f"  {(avg_sa - avg_proxy) / avg_sa * 100:>+7.1f}%"
-        f"  {(avg_rep - avg_proxy) / avg_rep * 100:>+9.1f}%  {total_overlaps:>8}"
-    )
+    if has_baselines:
+        baselines_sa = [r for r in results if r["sa_baseline"] is not None]
+        baselines_rep = [r for r in results if r["replace_baseline"] is not None]
+        avg_sa = sum(r["sa_baseline"] for r in baselines_sa) / len(baselines_sa) if baselines_sa else 0
+        avg_rep = sum(r["replace_baseline"] for r in baselines_rep) / len(baselines_rep) if baselines_rep else 0
+        print("-" * 80)
+        print(
+            f"{'AVG':>13}  {avg_proxy:>8.4f}  {avg_sa:>8.4f}  {avg_rep:>8.4f}"
+            f"  {(avg_sa - avg_proxy) / avg_sa * 100:>+7.1f}%"
+            f"  {(avg_rep - avg_proxy) / avg_rep * 100:>+9.1f}%  {total_overlaps:>8}"
+        )
+    else:
+        avg_wl = sum(r["wirelength"] for r in results) / len(results)
+        avg_den = sum(r["density"] for r in results) / len(results)
+        avg_cong = sum(r["congestion"] for r in results) / len(results)
+        print("-" * 80)
+        print(
+            f"{'AVG':>13}  {avg_proxy:>8.4f}"
+            f"  {avg_wl:>8.3f}  {avg_den:>8.3f}"
+            f"  {avg_cong:>10.3f}  {total_overlaps:>8}"
+        )
+
     print()
     print(f"Total runtime: {total_runtime:.2f}s")
     if total_overlaps > 0:
@@ -220,6 +267,11 @@ def main():
         help="Run on all 17 IBM benchmarks.",
     )
     parser.add_argument(
+        "--ng45",
+        action="store_true",
+        help="Run on NG45 commercial designs (ariane133, ariane136, mempool_tile, nvdla).",
+    )
+    parser.add_argument(
         "--vis",
         action="store_true",
         help="Visualize each placement after evaluation (saves to vis/<benchmark>.png).",
@@ -228,7 +280,7 @@ def main():
 
     # ── resolve paths ────────────────────────────────────────────────────
     testcase_root = Path("external/MacroPlacement/Testcases/ICCAD04")
-    if not testcase_root.exists():
+    if not args.ng45 and not testcase_root.exists():
         print(f"Error: Testcases not found at {testcase_root}")
         print("Run: git submodule update --init external/MacroPlacement")
         sys.exit(1)
@@ -238,7 +290,13 @@ def main():
     placer = _load_placer(placer_path)
     placer_name = type(placer).__name__
 
-    benchmarks_to_run = BENCHMARKS if args.all else [args.benchmark or "ibm01"]
+    # ── determine which benchmarks to run ────────────────────────────────
+    if args.ng45:
+        benchmarks_to_run = list(NG45_BENCHMARKS.keys())
+    elif args.all:
+        benchmarks_to_run = BENCHMARKS
+    else:
+        benchmarks_to_run = [args.benchmark or "ibm01"]
 
     # ── run ──────────────────────────────────────────────────────────────
     print("=" * 80)
@@ -249,7 +307,8 @@ def main():
     results = []
     for name in benchmarks_to_run:
         print(f"  {name}...", end=" ", flush=True)
-        result = evaluate_benchmark(placer, name, str(testcase_root))
+        ng45_dir = NG45_BENCHMARKS.get(name) if args.ng45 or name in NG45_BENCHMARKS else None
+        result = evaluate_benchmark(placer, name, str(testcase_root), ng45_dir=ng45_dir)
         results.append(result)
 
         status = (
