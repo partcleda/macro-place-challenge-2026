@@ -1,0 +1,617 @@
+#!/usr/bin/env python3
+"""
+Evaluate macro placements using OpenROAD-flow-scripts.
+
+This script:
+1. Loads a benchmark
+2. Generates macro placement TCL
+3. Creates ORFS design configuration
+4. Runs ORFS flow (make)
+5. Parses results
+
+Usage:
+    python scripts/evaluate_with_orfs.py --benchmark ariane133_ng45
+    python scripts/evaluate_with_orfs.py --all  # All modern benchmarks
+    python scripts/evaluate_with_orfs.py --benchmark ariane133_ng45 --skip-synthesis  # Skip Yosys
+"""
+
+import sys
+import json
+import argparse
+import shutil
+import subprocess
+import re
+import torch
+from pathlib import Path
+
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
+sys.path.insert(0, str(Path(__file__).parent))
+
+from benchmark import Benchmark
+from loader import load_benchmark_from_dir
+from objective import compute_proxy_cost
+from orfs_integration.design_generator import create_orfs_design, ORFSDesign
+from generate_macro_placement_tcl import write_orfs_macro_placement
+
+
+def get_top_module_name(benchmark_name: str, verilog_file: Path) -> str:
+    """
+    Get top-level module name for a benchmark.
+
+    For these netlists, the top module name is usually the base design name.
+    """
+    # Known mappings
+    module_map = {
+        'ariane133_ng45': 'ariane',
+        'ariane136_ng45': 'ariane',
+        'ariane136_asap7': 'ariane',
+        'nvdla_ng45': 'NV_nvdla',
+        'nvdla_asap7': 'NV_nvdla',
+        'mempool_tile_ng45': 'mempool_tile',
+        'mempool_tile_asap7': 'mempool_tile',
+        'bp_quad_ng45': 'black_parrot',
+    }
+
+    if benchmark_name in module_map:
+        return module_map[benchmark_name]
+
+    # Fallback: use filename without extension
+    return verilog_file.stem
+
+
+def run_orfs_flow(design_dir: Path, orfs_root: Path, use_docker: bool = True, skip_synthesis: bool = False) -> dict:
+    """
+    Run ORFS flow using make (with optional Docker).
+
+    Args:
+        design_dir: Path to design directory in ORFS
+        orfs_root: Path to OpenROAD-flow-scripts root
+        use_docker: Use docker_shell wrapper (recommended)
+        skip_synthesis: Skip Yosys synthesis (use pre-synthesized netlist)
+
+    Returns:
+        Dict with metrics
+    """
+    flow_dir = orfs_root / "flow"
+
+    # Design name relative to flow/designs/{tech}/
+    tech = design_dir.parent.name
+    design_name = design_dir.name
+
+    print(f"Running ORFS flow for {tech}/{design_name}...")
+
+    # Build command with docker_shell wrapper if requested
+    if use_docker:
+        cmd = [
+            "util/docker_shell",
+            "make",
+            f"DESIGN_CONFIG=./designs/{tech}/{design_name}/config.mk",
+            "finish"  # Run through detailed routing
+        ]
+    else:
+        cmd = [
+            "make",
+            f"DESIGN_CONFIG=./designs/{tech}/{design_name}/config.mk",
+            "finish"
+        ]
+
+    result = subprocess.run(
+        cmd,
+        cwd=flow_dir,
+        capture_output=True,
+        text=True,
+        timeout=10800  # 3 hour timeout (increased for large designs like mempool_tile)
+    )
+
+    if result.returncode != 0:
+        print(f"ERROR: ORFS failed with return code {result.returncode}")
+        print("STDOUT:")
+        print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
+        print("\nSTDERR:")
+        print(result.stderr[-2000:] if len(result.stderr) > 2000 else result.stderr)
+        return {'error': f'ORFS flow failed with code {result.returncode}'}
+
+    # Parse results from ORFS logs and reports
+    metrics = parse_orfs_results(flow_dir, tech, design_name)
+
+    return metrics
+
+
+def parse_orfs_results(flow_dir: Path, tech: str, design_name: str) -> dict:
+    """
+    Parse ORFS output using genMetrics.py.
+
+    Uses ORFS's official metrics extraction tool to generate a JSON with all metrics.
+    """
+    import tempfile
+
+    metrics = {}
+
+    # ORFS uses DESIGN_NICKNAME (not dir name) for log/result paths
+    nickname = design_name
+    config_path = flow_dir / "designs" / tech / design_name / "config.mk"
+    if config_path.exists():
+        m = re.search(r'DESIGN_NICKNAME\s*=\s*(\S+)', config_path.read_text())
+        if m:
+            nickname = m.group(1)
+
+    # Use ORFS genMetrics.py to extract all metrics
+    with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as tmp:
+        metrics_file = Path(tmp.name)
+
+    try:
+        # Run genMetrics.py (use relative paths since cwd=flow_dir)
+        cmd = [
+            'python3',
+            'util/genMetrics.py',
+            '--design', nickname,
+            '--platform', tech,
+            '--logs', f'logs/{tech}/{nickname}/base',
+            '--reports', f'reports/{tech}/{nickname}/base',
+            '--results', f'results/{tech}/{nickname}/base',
+            '--output', str(metrics_file)
+        ]
+
+        result = subprocess.run(cmd, capture_output=True, text=True, cwd=flow_dir)
+
+        if result.returncode == 0 and metrics_file.exists():
+            with open(metrics_file) as f:
+                all_metrics = json.load(f)
+
+            # Extract key final metrics
+            metrics = {
+                'tns': all_metrics.get('finish__timing__setup__tns', 0),
+                'wns': all_metrics.get('finish__timing__setup__ws', 0),
+                'hold_tns': all_metrics.get('finish__timing__hold__tns', 0),
+                'hold_wns': all_metrics.get('finish__timing__hold__ws', 0),
+                'wire_length': all_metrics.get('detailedroute__route__wirelength', 0),
+                'area': all_metrics.get('finish__design__core__area', 0),
+                'power': all_metrics.get('finish__power__total', 0),
+                'fmax': all_metrics.get('finish__timing__fmax', 0),
+            }
+        else:
+            print(f"Warning: genMetrics.py failed: {result.stderr}")
+
+    finally:
+        # Clean up temp file
+        if metrics_file.exists():
+            metrics_file.unlink()
+
+    return metrics
+
+
+def evaluate_benchmark(
+    benchmark_name: str,
+    orfs_root: Path,
+    output_dir: Path,
+    use_docker: bool = True,
+    skip_synthesis: bool = False,
+    placement_path: Path = None
+) -> dict:
+    """Evaluate a single benchmark."""
+    print(f"\n{'='*80}")
+    print(f"Evaluating: {benchmark_name}")
+    print(f"{'='*80}")
+
+    # Load benchmark
+    pt_file = Path(f"benchmarks/processed/public/{benchmark_name}.pt")
+    if not pt_file.exists():
+        print(f"ERROR: {pt_file} not found")
+        return {'error': 'benchmark not found', 'benchmark': benchmark_name}
+
+    benchmark = Benchmark.load(str(pt_file))
+    print(f"✓ Loaded benchmark: {benchmark.num_macros} macros")
+
+    # Resolve source paths
+    tech = "nangate45" if "ng45" in benchmark_name else "asap7"
+    source_name = benchmark_name.replace("_ng45", "").replace("_asap7", "")
+
+    # Map benchmark names to protobuf source directories
+    source_dir_overrides = {
+        'bp_quad': Path("external/MacroPlacement/CodeElements/SimulatedAnnealingGWTW/test/bp_ng45"),
+    }
+
+    if source_name in source_dir_overrides:
+        source_dir = source_dir_overrides[source_name]
+    elif tech == "nangate45":
+        source_dir = Path(f"external/MacroPlacement/Flows/NanGate45/{source_name}/netlist/output_CT_Grouping")
+    else:
+        source_dir = Path(f"external/MacroPlacement/Flows/ASAP7/{source_name}/netlist/output_CT_Grouping")
+
+    if not source_dir.exists():
+        print(f"ERROR: Source directory not found: {source_dir}")
+        return {'error': 'source directory not found', 'benchmark': benchmark_name}
+
+    _, plc = load_benchmark_from_dir(str(source_dir))
+
+    # Load placement: use provided tensor or fall back to benchmark default
+    if placement_path is not None:
+        placement = torch.load(placement_path, weights_only=True)
+        print(f"✓ Loaded placement from {placement_path} (shape: {list(placement.shape)})")
+    else:
+        placement = benchmark.macro_positions
+
+    # 1. Compute proxy cost
+    print("\n[1/4] Computing proxy cost...")
+    proxy_metrics = compute_proxy_cost(placement, benchmark, plc)
+    print(f"  ✓ Proxy cost: {proxy_metrics['proxy_cost']:.6f}")
+
+    # 2. Generate macro placement TCL (will be regenerated with core_area clamping below)
+    print("\n[2/4] Generating macro placement TCL...")
+    tcl_file = output_dir / f"{benchmark_name}_macros.tcl"
+
+    # 3. Check for existing ORFS configuration
+    print("\n[3/4] Looking for existing ORFS configuration...")
+
+    # Path to their OpenROAD scripts directory
+    if tech == "nangate45":
+        orfs_config_dir = Path(f"external/MacroPlacement/Flows/NanGate45/{source_name}/scripts/OpenROAD/{source_name}")
+    else:
+        orfs_config_dir = Path(f"external/MacroPlacement/Flows/ASAP7/{source_name}/scripts/OpenROAD/{source_name}")
+
+    # Fallback: check ORFS built-in designs (maps source_name to ORFS design name)
+    orfs_builtin_map = {
+        'bp_quad': 'black_parrot',
+    }
+    if not orfs_config_dir.exists() and source_name in orfs_builtin_map:
+        orfs_design_name_builtin = orfs_builtin_map[source_name]
+        builtin_dir = orfs_root / "flow" / "designs" / tech / orfs_design_name_builtin
+        if builtin_dir.exists():
+            orfs_config_dir = builtin_dir
+            # Use the ORFS design name for consistency
+            source_name = orfs_design_name_builtin
+
+    if orfs_config_dir.exists():
+        print(f"  ✓ Found existing ORFS config: {orfs_config_dir}")
+
+        # Use their original design name to keep paths consistent
+        design_dir = orfs_root / "flow" / "designs" / tech / source_name
+        if design_dir.resolve() != orfs_config_dir.resolve():
+            # Copy from external config into ORFS
+            if design_dir.exists():
+                shutil.rmtree(design_dir)
+            shutil.copytree(orfs_config_dir, design_dir)
+        # else: config is already an ORFS built-in design, use in-place
+
+        # For ASAP7, copy SRAM libraries from MacroPlacement/Enablements
+        if tech == "asap7":
+            asap7_enablements = Path("external/MacroPlacement/Enablements/ASAP7")
+            if asap7_enablements.exists():
+                # Copy SRAM LEF files
+                sram_lefs = list((asap7_enablements / "lef").glob("sram_*.lef"))
+                for lef in sram_lefs:
+                    shutil.copy(lef, design_dir / lef.name)
+
+                # Copy SRAM LIB files
+                sram_libs = list((asap7_enablements / "lib").glob("sram_*.lib"))
+                for lib in sram_libs:
+                    shutil.copy(lib, design_dir / lib.name)
+
+                print(f"  ✓ Copied {len(sram_lefs)} SRAM LEF and {len(sram_libs)} LIB files from Enablements")
+
+        # If skip_synthesis is enabled, modify config.mk to use pre-synthesized netlist
+        if skip_synthesis:
+            config_mk = design_dir / "config.mk"
+            with open(config_mk, 'a') as f:
+                f.write("\n# Skip synthesis - use pre-synthesized netlist\n")
+                f.write("export SYNTH_NETLIST_FILES = $(VERILOG_FILES)\n")
+            print(f"  ✓ Added SYNTH_NETLIST_FILES to skip synthesis")
+
+        # Fix benchmark-specific config issues
+        config_mk = design_dir / "config.mk"
+        if config_mk.exists():
+            config_content = config_mk.read_text()
+
+            if source_name == "mempool_tile":
+                # 1. Disable hierarchical flow
+                config_content = re.sub(
+                    r'export FLOW_VARIANT = hier',
+                    '# export FLOW_VARIANT = hier  # Disabled for flat flow',
+                    config_content
+                )
+                config_content = re.sub(
+                    r'export SYNTH_HIERARCHICAL = 1',
+                    '# export SYNTH_HIERARCHICAL = 1  # Disabled for flat flow',
+                    config_content
+                )
+                config_content = re.sub(
+                    r'export RTLMP_FLOW = True',
+                    '# export RTLMP_FLOW = True  # Disabled for flat flow',
+                    config_content
+                )
+                # 2. Remove FLOORPLAN_DEF (conflicts with DIE_AREA/CORE_AREA)
+                config_content = re.sub(
+                    r'^(export FLOORPLAN_DEF\s*=.*)$',
+                    r'# \1  # Disabled: conflicts with DIE_AREA/CORE_AREA',
+                    config_content,
+                    flags=re.MULTILINE
+                )
+                # 3. Increase die size to 2000x2000 for 1272 IO pins
+                config_content = re.sub(
+                    r'export DIE_AREA\s*=\s*0\.0 0\.0 1000 1000',
+                    'export DIE_AREA    = 0.0 0.0 2000 2000  # Increased for 1272 IO pins',
+                    config_content
+                )
+                config_content = re.sub(
+                    r'export CORE_AREA\s*=\s*10\.07 9\.94 990 990',
+                    'export CORE_AREA   = 10.07 9.94 1990 1990  # Increased with DIE_AREA',
+                    config_content
+                )
+                # 4. Open all 4 die sides for pin placement with small corner exclusions
+                config_content = re.sub(
+                    r'export PLACE_PINS_ARGS\s*=.*',
+                    'export PLACE_PINS_ARGS = -exclude left:0-200 -exclude left:1800-2000 '
+                    '-exclude right:0-200 -exclude right:1800-2000 '
+                    '-exclude top:0-200 -exclude top:1800-2000 '
+                    '-exclude bottom:0-200 -exclude bottom:1800-2000',
+                    config_content
+                )
+                # 5. Reduce placement density addon (die is 4x larger)
+                config_content = re.sub(
+                    r'export PLACE_DENSITY_LB_ADDON\s*=\s*0\.20',
+                    'export PLACE_DENSITY_LB_ADDON = 0.05  # Reduced: 4x larger die area',
+                    config_content
+                )
+                print(f"  ✓ Fixed mempool_tile config (disabled hierarchical flow, increased die to 2000x2000, opened all pin sides)")
+
+            if source_name == "ariane136":
+                # Reduce macro halo so 136 macros can be clustered (default 22.4x15.12 is too large)
+                if 'MACRO_PLACE_HALO' not in config_content:
+                    config_content += '\nexport MACRO_PLACE_HALO = 11.2 7.56\n'
+                else:
+                    config_content = re.sub(
+                        r'export MACRO_PLACE_HALO\s*=.*',
+                        'export MACRO_PLACE_HALO = 11.2 7.56',
+                        config_content
+                    )
+                print(f"  ✓ Reduced ariane136 MACRO_PLACE_HALO to 11.2 7.56 (from default 22.4 15.12)")
+
+            if source_name == "black_parrot":
+                # Disable hierarchical synthesis — we use our own macro placement
+                config_content = re.sub(
+                    r'export SYNTH_HIERARCHICAL = 1',
+                    '# export SYNTH_HIERARCHICAL = 1  # Disabled: using our macro placement',
+                    config_content
+                )
+                print(f"  ✓ Disabled hierarchical synthesis for black_parrot")
+
+            # Fix ASAP7 SRAM library paths to use local copies
+            if tech == "asap7":
+                # Replace PLATFORM_DIR references with local paths
+                config_content = re.sub(
+                    r'\$\(PLATFORM_DIR\)/lef/(sram_[^)]+\.lef)',
+                    r'./designs/asap7/' + source_name + r'/\1',
+                    config_content
+                )
+                config_content = re.sub(
+                    r'\$\(PLATFORM_DIR\)/lib/(sram_[^)]+\.lib)',
+                    r'./designs/asap7/' + source_name + r'/\1',
+                    config_content
+                )
+                print(f"  ✓ Fixed ASAP7 config to use local SRAM libraries")
+
+            # Add MACRO_PLACEMENT_TCL for ALL designs so ORFS uses our placement
+            if 'MACRO_PLACEMENT_TCL' not in config_content:
+                config_content += '\nexport MACRO_PLACEMENT_TCL = ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/macros.tcl\n'
+
+            # Workaround: repair_timing -sequence is not supported in older OpenROAD builds.
+            # Set REMOVE_ABC_BUFFERS=1 so floorplan.tcl takes the remove_buffers path
+            # instead of calling repair_timing_helper with -sequence.
+            if 'REMOVE_ABC_BUFFERS' not in config_content:
+                config_content += '\nexport REMOVE_ABC_BUFFERS = 1\n'
+
+            config_mk.write_text(config_content)
+
+        # Patch ORFS macro_place_util.tcl to skip rtl_macro_placer when
+        # MACRO_PLACEMENT_TCL is set (our pre-computed placement).
+        # rtl_macro_placer crashes on already-placed macros in some OpenROAD versions.
+        mp_util = orfs_root / "flow" / "scripts" / "macro_place_util.tcl"
+        mp_util_text = mp_util.read_text()
+        if 'SKIP_RTLMP' not in mp_util_text:
+            mp_util_text = mp_util_text.replace(
+                'log_cmd rtl_macro_placer {*}$all_args',
+                'if { [env_var_exists_and_non_empty SKIP_RTLMP] } {\n'
+                '    puts "Skipping rtl_macro_placer (SKIP_RTLMP set)"\n'
+                '  } else {\n'
+                '    log_cmd rtl_macro_placer {*}$all_args\n'
+                '  }'
+            )
+            mp_util.write_text(mp_util_text)
+            print(f"  ✓ Patched macro_place_util.tcl to support SKIP_RTLMP")
+
+        # Set SKIP_RTLMP in config
+        config_mk = design_dir / "config.mk"
+        config_text = config_mk.read_text()
+        if 'SKIP_RTLMP' not in config_text:
+            config_text += '\nexport SKIP_RTLMP = 1\n'
+            config_mk.write_text(config_text)
+        print(f"  ✓ Set SKIP_RTLMP=1 in config")
+
+        # Parse CORE_AREA from config.mk and regenerate TCL with clamping
+        core_area = None
+        config_text = (design_dir / "config.mk").read_text()
+        m = re.search(r'CORE_AREA\s*=\s*([\d.]+)\s+([\d.]+)\s+([\d.]+)\s+([\d.]+)', config_text)
+        if m:
+            core_area = tuple(float(x) for x in m.groups())
+            print(f"  ✓ Parsed CORE_AREA: {core_area}")
+
+        # Regenerate TCL with core_area clamping
+        write_orfs_macro_placement(placement, benchmark, plc, str(tcl_file), core_area=core_area)
+        shutil.copy(tcl_file, design_dir / "macros.tcl")
+        # Also overwrite any existing macro placement TCL referenced in config
+        tcl_ref = re.search(r'MACRO_PLACEMENT_TCL\s*=.*?/([^/\s]+\.tcl)', config_text)
+        if tcl_ref and tcl_ref.group(1) != "macros.tcl":
+            shutil.copy(tcl_file, design_dir / tcl_ref.group(1))
+            print(f"  ✓ Also overwrote {tcl_ref.group(1)} with our placement")
+
+        print(f"  ✓ Copied config to: {design_dir}")
+        print(f"  ✓ Using original design name: {source_name}")
+        print(f"  ✓ Using our macro placement: {tcl_file.name}")
+    else:
+        print(f"  ⚠️  No existing config found at {orfs_config_dir}")
+        print(f"  Generating basic config (may not work)")
+
+        # Fallback to generated config
+        verilog_files = list(source_dir.glob("*.v"))
+        if not verilog_files:
+            parent_netlist = source_dir.parent
+            verilog_files = list(parent_netlist.glob("*.v"))
+
+        if not verilog_files:
+            return {'error': 'no verilog files', 'benchmark': benchmark_name}
+
+        # Generate TCL without core_area clamping (fallback path)
+        write_orfs_macro_placement(placement, benchmark, plc, str(tcl_file))
+
+        top_module = get_top_module_name(benchmark_name, verilog_files[0])
+        design = ORFSDesign(
+            name=benchmark_name,
+            tech=tech,
+            verilog_files=verilog_files,
+            macro_placement_tcl=tcl_file,
+            clock_period=4.0,  # Match their 4ns
+            core_utilization=0.65,
+            top_module=top_module
+        )
+        design_dir = create_orfs_design(design, orfs_root, source_dir)
+
+    # 4. Run ORFS flow
+    print("\n[4/4] Running OpenROAD-flow-scripts...")
+    print("  (This may take 20-40 minutes per benchmark)")
+
+    # Use source_name for the ORFS design if we copied their config
+    if orfs_config_dir.exists():
+        # Update config to point to correct design
+        orfs_design_name = source_name
+    else:
+        orfs_design_name = benchmark_name
+
+    # Clean stale ORFS results/logs so changed config (e.g. DIE_AREA) takes effect
+    # Check both the design directory name and the DESIGN_NICKNAME
+    nickname = orfs_design_name
+    config_path = design_dir / "config.mk"
+    if config_path.exists():
+        m = re.search(r'DESIGN_NICKNAME\s*=\s*(\S+)', config_path.read_text())
+        if m:
+            nickname = m.group(1)
+    stale_names = {orfs_design_name, nickname} if orfs_config_dir.exists() else {benchmark_name}
+    for subdir in ["results", "logs", "objects"]:
+        for sname in stale_names:
+            stale = orfs_root / "flow" / subdir / tech / sname
+            if stale.exists():
+                shutil.rmtree(stale)
+                print(f"  ✓ Cleaned stale {subdir}/{tech}/{stale.name}")
+
+    orfs_metrics = run_orfs_flow(design_dir, orfs_root, use_docker, skip_synthesis)
+
+    # 5. Combine results
+    results = {
+        'benchmark': benchmark_name,
+        'num_macros': int(benchmark.num_macros),
+        'proxy_cost': float(proxy_metrics['proxy_cost']),
+        'wirelength': float(proxy_metrics['wirelength_cost']),
+        'density': float(proxy_metrics['density_cost']),
+        'congestion': float(proxy_metrics['congestion_cost']),
+        'orfs': orfs_metrics
+    }
+
+    print(f"\n✓ Evaluation complete for {benchmark_name}")
+    return results
+
+
+def main():
+    parser = argparse.ArgumentParser(description='Evaluate benchmarks with ORFS')
+    parser.add_argument('--benchmark', type=str, help='Single benchmark')
+    parser.add_argument('--all', action='store_true', help='All modern benchmarks')
+    parser.add_argument('--orfs-root', type=Path,
+                       default=Path("../OpenROAD-flow-scripts"),
+                       help='Path to OpenROAD-flow-scripts')
+    parser.add_argument('--output', type=Path,
+                       default=Path("output/orfs_evaluation"),
+                       help='Output directory')
+    parser.add_argument('--no-docker', action='store_true',
+                       help='Run without Docker (use native ORFS installation)')
+    parser.add_argument('--skip-synthesis', action='store_true',
+                       help='Skip Yosys synthesis (use pre-synthesized netlist)')
+    parser.add_argument('--placement', type=Path,
+                       help='Path to placement tensor (.pt file) with shape [num_macros, 2]')
+
+    args = parser.parse_args()
+
+    # Verify ORFS exists
+    if not args.orfs_root.exists():
+        print(f"ERROR: OpenROAD-flow-scripts not found at {args.orfs_root}")
+        print("\nTo set up ORFS:")
+        print("  cd ..")
+        print("  git clone --depth=1 https://github.com/The-OpenROAD-Project/OpenROAD-flow-scripts")
+        return 1
+
+    # Discover benchmarks
+    if args.all:
+        benchmarks = [
+            'ariane133_ng45', 'ariane136_ng45', 'bp_quad_ng45', 'nvdla_ng45', 'mempool_tile_ng45',
+            'ariane136_asap7', 'nvdla_asap7', 'mempool_tile_asap7'
+        ]
+    elif args.benchmark:
+        benchmarks = [args.benchmark]
+    else:
+        print("ERROR: Specify --benchmark or --all")
+        return 1
+
+    args.output.mkdir(parents=True, exist_ok=True)
+
+    # Evaluate all
+    all_results = []
+    for name in benchmarks:
+        result = evaluate_benchmark(
+            name,
+            args.orfs_root,
+            args.output,
+            use_docker=not args.no_docker,
+            skip_synthesis=args.skip_synthesis,
+            placement_path=args.placement
+        )
+        all_results.append(result)
+
+        # Save incremental results
+        summary_file = args.output / "evaluation_summary.json"
+        with open(summary_file, 'w') as f:
+            json.dump(all_results, f, indent=2)
+
+    # Print final summary
+    print(f"\n{'='*80}")
+    print(f"Evaluation Complete!")
+    print(f"Results: {args.output / 'evaluation_summary.json'}")
+    print(f"{'='*80}")
+
+    # Print table
+    print(f"\n{'Benchmark':<25} {'Proxy Cost':<15} {'WNS (ns)':<12} {'TNS (ns)':<12} {'Fmax (MHz)':<12} {'Wire (um)':<12} {'Area (um²)':<15}")
+    print("-" * 115)
+
+    for result in all_results:
+        orfs = result.get('orfs', {})
+        wns = orfs.get('wns', 'N/A')
+        tns = orfs.get('tns', 'N/A')
+        fmax = orfs.get('fmax', 'N/A')
+        wire_length = orfs.get('wire_length', 'N/A')
+        area = orfs.get('area', 'N/A')
+
+        wns_str = f"{wns}" if isinstance(wns, str) else f"{wns:.2f}"
+        tns_str = f"{tns}" if isinstance(tns, str) else f"{tns:.2f}"
+        fmax_str = f"{fmax / 1e6:.1f}" if isinstance(fmax, (int, float)) else "N/A"
+        wire_str = f"{wire_length / 1e6:.2f}" if isinstance(wire_length, (int, float)) else "N/A"
+        area_str = f"{area / 1e6:.3f}" if isinstance(area, (int, float)) else "N/A"
+
+        print(f"{result['benchmark']:<25} "
+              f"{result['proxy_cost']:<15.6f} "
+              f"{wns_str:<12} "
+              f"{tns_str:<12} "
+              f"{fmax_str:<12} "
+              f"{wire_str:<12} "
+              f"{area_str:<15}")
+
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
