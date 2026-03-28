@@ -20,10 +20,20 @@ import json
 import argparse
 import shutil
 import subprocess
+import resource
 import re
 import torch
 from pathlib import Path
 
+# Memory limit for ORFS subprocesses (64 GB)
+MEMORY_LIMIT_BYTES = 64 * 1024 * 1024 * 1024
+
+def _set_memory_limit():
+    """Pre-exec hook: cap virtual memory for the child process tree."""
+    resource.setrlimit(resource.RLIMIT_AS, (MEMORY_LIMIT_BYTES, MEMORY_LIMIT_BYTES))
+
+sys.path.insert(0, str(Path(__file__).parent.parent))  # project root (for macro_place.*)
+sys.path.insert(0, str(Path(__file__).parent.parent / "macro_place"))  # for direct imports
 sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 sys.path.insert(0, str(Path(__file__).parent))
 
@@ -94,22 +104,55 @@ def run_orfs_flow(design_dir: Path, orfs_root: Path, use_docker: bool = True, sk
             f"DESIGN_CONFIG=./designs/{tech}/{design_name}/config.mk",
             "finish"
         ]
+        # Help ORFS find system-installed tools when not using Nix or Docker
+        import shutil as _shutil
+        for tool_var, tool_name in [("YOSYS_EXE", "yosys"), ("OPENROAD_EXE", "openroad")]:
+            tool_path = _shutil.which(tool_name)
+            if tool_path:
+                cmd.append(f"{tool_var}={tool_path}")
 
-    result = subprocess.run(
-        cmd,
-        cwd=flow_dir,
-        capture_output=True,
-        text=True,
-        timeout=10800  # 3 hour timeout (increased for large designs like mempool_tile)
-    )
+    # Stream output to log files instead of buffering in memory
+    log_dir = design_dir / "eval_logs"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    stdout_log = log_dir / "orfs_stdout.log"
+    stderr_log = log_dir / "orfs_stderr.log"
+
+    print(f"  Logs: {stdout_log}")
+    print(f"         {stderr_log}")
+
+    with open(stdout_log, 'w') as fout, open(stderr_log, 'w') as ferr:
+        try:
+            result = subprocess.run(
+                cmd,
+                cwd=flow_dir,
+                stdout=fout,
+                stderr=ferr,
+                timeout=21600,  # 6 hour timeout
+                preexec_fn=_set_memory_limit,
+            )
+        except subprocess.TimeoutExpired:
+            print("ERROR: ORFS timed out after 6 hours")
+            return {'error': 'ORFS flow timed out'}
+        except MemoryError:
+            print("ERROR: ORFS hit memory limit")
+            return {'error': 'ORFS flow hit memory limit'}
+
+    # Check if final artifacts exist even if exit code was non-zero
+    # (e.g. gui::show_worst_path fails headless but PnR completed)
+    results_dir = flow_dir / "results" / tech / design_name / "base"
+    final_artifacts = list(results_dir.glob("6_final.*")) if results_dir.exists() else []
+
+    if result.returncode != 0 and not final_artifacts:
+        print(f"ERROR: ORFS failed with return code {result.returncode}")
+        # Print tail of logs
+        for label, logf in [("STDOUT", stdout_log), ("STDERR", stderr_log)]:
+            tail = logf.read_text()[-2000:]
+            if tail.strip():
+                print(f"{label} (last 2000 chars):\n{tail}")
+        return {'error': f'ORFS flow failed with code {result.returncode}'}
 
     if result.returncode != 0:
-        print(f"ERROR: ORFS failed with return code {result.returncode}")
-        print("STDOUT:")
-        print(result.stdout[-2000:] if len(result.stdout) > 2000 else result.stdout)
-        print("\nSTDERR:")
-        print(result.stderr[-2000:] if len(result.stderr) > 2000 else result.stderr)
-        return {'error': f'ORFS flow failed with code {result.returncode}'}
+        print(f"WARNING: ORFS exited with code {result.returncode} but final artifacts exist — parsing metrics anyway")
 
     # Parse results from ORFS logs and reports
     metrics = parse_orfs_results(flow_dir, tech, design_name)
@@ -159,15 +202,29 @@ def parse_orfs_results(flow_dir: Path, tech: str, design_name: str) -> dict:
                 all_metrics = json.load(f)
 
             # Extract key final metrics
+            # Derive fmax from clock period and slack
+            clock_period = 0
+            clock_details = all_metrics.get('constraints__clocks__details', [])
+            if clock_details:
+                # Format: ['core_clock: 4.0000']
+                m = re.search(r':\s*([\d.]+)', clock_details[0])
+                if m:
+                    clock_period = float(m.group(1))
+            wns = all_metrics.get('finish__timing__setup__ws', 0)
+            # fmax = 1 / (period - slack) in MHz; positive slack = timing met
+            period_min = clock_period - wns if clock_period > 0 else 0
+            fmax = 1000.0 / period_min if period_min > 0 else 0
+
             metrics = {
                 'tns': all_metrics.get('finish__timing__setup__tns', 0),
-                'wns': all_metrics.get('finish__timing__setup__ws', 0),
+                'wns': wns,
                 'hold_tns': all_metrics.get('finish__timing__hold__tns', 0),
                 'hold_wns': all_metrics.get('finish__timing__hold__ws', 0),
                 'wire_length': all_metrics.get('detailedroute__route__wirelength', 0),
                 'area': all_metrics.get('finish__design__core__area', 0),
                 'power': all_metrics.get('finish__power__total', 0),
-                'fmax': all_metrics.get('finish__timing__fmax', 0),
+                'fmax': round(fmax, 2),
+                'clock_period': clock_period,
             }
         else:
             print(f"Warning: genMetrics.py failed: {result.stderr}")
