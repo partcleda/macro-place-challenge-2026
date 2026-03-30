@@ -68,11 +68,12 @@ def validate_placement(
         if not torch.allclose(original_pos, new_pos, atol=1e-3):
             violations.append("Fixed macros have been moved")
 
-    # Check overlaps (matching SA.py IsFeasible logic)
+    # Check overlaps among hard macros only (soft macros naturally overlap)
     if check_overlaps:
         overlap_count = 0
-        for i in range(benchmark.num_macros):
-            for j in range(i + 1, benchmark.num_macros):
+        num_hard = getattr(benchmark, 'num_hard_macros', benchmark.num_macros)
+        for i in range(num_hard):
+            for j in range(i + 1, num_hard):
                 # Get bounding boxes
                 lx_i, ux_i = x_min[i].item(), x_max[i].item()
                 ly_i, uy_i = y_min[i].item(), y_max[i].item()

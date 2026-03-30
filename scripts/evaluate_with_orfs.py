@@ -285,6 +285,12 @@ def evaluate_benchmark(
     if placement_path is not None:
         placement = torch.load(placement_path, weights_only=True)
         print(f"✓ Loaded placement from {placement_path} (shape: {list(placement.shape)})")
+        # If only hard macros provided, pad with soft macro initial positions
+        if placement.shape[0] < benchmark.num_macros:
+            full = benchmark.macro_positions.clone()
+            full[:placement.shape[0]] = placement
+            placement = full
+            print(f"  Padded to full placement: {list(placement.shape)}")
     else:
         placement = benchmark.macro_positions
 

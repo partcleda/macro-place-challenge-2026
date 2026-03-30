@@ -75,9 +75,10 @@ def compute_overlap_metrics(
     max_overlap_area = 0.0
     macros_with_overlaps = set()
 
-    # Check all pairs for overlap
-    for i in range(num_macros):
-        for j in range(i + 1, num_macros):
+    # Check hard macro pairs only for overlap (soft macros naturally overlap)
+    num_hard = getattr(benchmark, 'num_hard_macros', num_macros)
+    for i in range(num_hard):
+        for j in range(i + 1, num_hard):
             # Calculate center-to-center distances
             dx = abs(positions[i, 0] - positions[j, 0])
             dy = abs(positions[i, 1] - positions[j, 1])
