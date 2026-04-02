@@ -48,7 +48,7 @@ def compute_overlap_metrics(
 
     Returns:
         Dictionary with:
-            - overlap_count: Number of overlapping macro pairs
+            - overlap_count: Number of overlapping macro pairs (hard-hard, hard-soft, soft-soft)
             - total_overlap_area: Total area of all overlaps (μm²)
             - max_overlap_area: Largest single overlap area (μm²)
             - num_macros_with_overlaps: Number of macros involved in at least one overlap
@@ -75,10 +75,9 @@ def compute_overlap_metrics(
     max_overlap_area = 0.0
     macros_with_overlaps = set()
 
-    # Check hard macro pairs only for overlap (soft macros naturally overlap)
-    num_hard = getattr(benchmark, 'num_hard_macros', num_macros)
-    for i in range(num_hard):
-        for j in range(i + 1, num_hard):
+    # All macro pairs (hard and soft): overlaps are illegal for evaluation
+    for i in range(num_macros):
+        for j in range(i + 1, num_macros):
             # Calculate center-to-center distances
             dx = abs(positions[i, 0] - positions[j, 0])
             dy = abs(positions[i, 1] - positions[j, 1])
@@ -187,10 +186,10 @@ def _set_placement(plc: PlacementCost, placement: torch.Tensor, benchmark: Bench
     placement_np = placement.cpu().numpy()
 
     # Build macro_name -> [pin_indices] lookup (cached on plc)
-    if not hasattr(plc, '_macro_pin_map'):
+    if not hasattr(plc, "_macro_pin_map"):
         pin_map = {}
         for idx, mod in enumerate(plc.modules_w_pins):
-            if mod.get_type() == 'MACRO_PIN' and hasattr(mod, 'get_macro_name'):
+            if mod.get_type() == "MACRO_PIN" and hasattr(mod, "get_macro_name"):
                 name = mod.get_macro_name()
                 if name not in pin_map:
                     pin_map[name] = []

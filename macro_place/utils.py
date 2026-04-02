@@ -19,12 +19,12 @@ def validate_placement(
     - No NaN/Inf values
     - Correct shape
     - Fixed macros at original positions
-    - No macro overlaps (optional, can be slow for large designs)
+    - No pairwise macro overlaps, including soft macros (optional; can be slow)
 
     Args:
         placement: [num_macros, 2] tensor of (x, y) positions
         benchmark: Benchmark object
-        check_overlaps: If True, check for macro-to-macro overlaps (default: True)
+        check_overlaps: If True, check pairwise overlaps among all macros (default: True)
 
     Returns:
         (is_valid, violations)
@@ -68,12 +68,12 @@ def validate_placement(
         if not torch.allclose(original_pos, new_pos, atol=1e-3):
             violations.append("Fixed macros have been moved")
 
-    # Check overlaps among hard macros only (soft macros naturally overlap)
+    # Check overlaps among all macros (hard and soft)
     if check_overlaps:
         overlap_count = 0
-        num_hard = getattr(benchmark, 'num_hard_macros', benchmark.num_macros)
-        for i in range(num_hard):
-            for j in range(i + 1, num_hard):
+        n = benchmark.num_macros
+        for i in range(n):
+            for j in range(i + 1, n):
                 # Get bounding boxes
                 lx_i, ux_i = x_min[i].item(), x_max[i].item()
                 ly_i, uy_i = y_min[i].item(), y_max[i].item()

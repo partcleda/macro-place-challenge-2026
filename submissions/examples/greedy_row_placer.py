@@ -2,9 +2,9 @@
 Greedy Row Placer - Demo Submission
 
 A simple but legal placer that:
-1. Sorts macros by height (tallest first)
+1. Sorts movable macros by height (tallest first)
 2. Places them left-to-right in rows (like shelf packing)
-3. Guarantees zero overlaps and canvas boundary compliance
+3. Guarantees zero overlaps among all macros (hard and soft) and canvas compliance
 
 This produces valid, scoreable placements but makes no attempt to
 optimize wirelength, density, or congestion. Use it as a starting
@@ -25,14 +25,13 @@ class GreedyRowPlacer:
     """
     Greedy row-based (shelf packing) placement.
 
-    Places macros in rows from bottom to top, left to right,
-    sorted by descending height. Guarantees zero overlaps.
+    Places every movable macro (hard and soft) in rows from bottom to top,
+    left to right, sorted by descending height. Guarantees zero pairwise overlaps.
     """
 
     def place(self, benchmark: Benchmark) -> torch.Tensor:
         placement = benchmark.macro_positions.clone()
-        # Only place hard macros; soft macros stay at initial positions
-        movable = benchmark.get_movable_mask() & benchmark.get_hard_macro_mask()
+        movable = benchmark.get_movable_mask()
         movable_indices = torch.where(movable)[0].tolist()
 
         sizes = benchmark.macro_sizes

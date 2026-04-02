@@ -128,7 +128,9 @@ def _load_placer(path: Path):
 # ── Single-benchmark evaluation ─────────────────────────────────────────────
 
 
-def evaluate_benchmark(placer, name: str, testcase_root: str, ng45_dir: str = None) -> dict:
+def evaluate_benchmark(
+    placer, name: str, testcase_root: str, ng45_dir: str = None
+) -> dict:
     """Run *placer* on a single benchmark and return a results dict."""
     if ng45_dir:
         netlist_file = f"{ng45_dir}/netlist.pb.txt"
@@ -190,12 +192,20 @@ def _print_summary_table(results):
                 else 0
             )
             vs_rep = (
-                ((r["replace_baseline"] - r["proxy_cost"]) / r["replace_baseline"] * 100)
+                (
+                    (r["replace_baseline"] - r["proxy_cost"])
+                    / r["replace_baseline"]
+                    * 100
+                )
                 if r["replace_baseline"]
                 else 0
             )
             sa_str = f"{r['sa_baseline']:>8.4f}" if r["sa_baseline"] else f"{'—':>8}"
-            rep_str = f"{r['replace_baseline']:>8.4f}" if r["replace_baseline"] else f"{'—':>8}"
+            rep_str = (
+                f"{r['replace_baseline']:>8.4f}"
+                if r["replace_baseline"]
+                else f"{'—':>8}"
+            )
             print(
                 f"{r['name']:>13}  {r['proxy_cost']:>8.4f}"
                 f"  {sa_str}  {rep_str}"
@@ -215,8 +225,16 @@ def _print_summary_table(results):
     if has_baselines:
         baselines_sa = [r for r in results if r["sa_baseline"] is not None]
         baselines_rep = [r for r in results if r["replace_baseline"] is not None]
-        avg_sa = sum(r["sa_baseline"] for r in baselines_sa) / len(baselines_sa) if baselines_sa else 0
-        avg_rep = sum(r["replace_baseline"] for r in baselines_rep) / len(baselines_rep) if baselines_rep else 0
+        avg_sa = (
+            sum(r["sa_baseline"] for r in baselines_sa) / len(baselines_sa)
+            if baselines_sa
+            else 0
+        )
+        avg_rep = (
+            sum(r["replace_baseline"] for r in baselines_rep) / len(baselines_rep)
+            if baselines_rep
+            else 0
+        )
         print("-" * 80)
         print(
             f"{'AVG':>13}  {avg_proxy:>8.4f}  {avg_sa:>8.4f}  {avg_rep:>8.4f}"
@@ -307,7 +325,9 @@ def main():
     results = []
     for name in benchmarks_to_run:
         print(f"  {name}...", end=" ", flush=True)
-        ng45_dir = NG45_BENCHMARKS.get(name) if args.ng45 or name in NG45_BENCHMARKS else None
+        ng45_dir = (
+            NG45_BENCHMARKS.get(name) if args.ng45 or name in NG45_BENCHMARKS else None
+        )
         result = evaluate_benchmark(placer, name, str(testcase_root), ng45_dir=ng45_dir)
         results.append(result)
 
@@ -326,7 +346,9 @@ def main():
             vis_dir = Path("vis")
             vis_dir.mkdir(exist_ok=True)
             save_path = str(vis_dir / f"{name}.png")
-            visualize_placement(result["placement"], result["benchmark"], save_path=save_path)
+            visualize_placement(
+                result["placement"], result["benchmark"], save_path=save_path
+            )
 
     if len(results) > 1:
         _print_summary_table(results)
