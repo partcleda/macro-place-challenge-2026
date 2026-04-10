@@ -1,0 +1,9 @@
+# Docker build context exclusions for eval_docker/
+.git/
+submissions_eval/
+assets/
+benchmarks/processed/
+eval_docker/results/
+*.gif
+*.png
+os_debug.txt
