@@ -177,31 +177,33 @@ def _get_pin_side(x: float, y: float, width: float, height: float) -> str:
 
 
 def _write_nets(fp, plc: PlacementCost):
-    """Write NETS section (connectivity)."""
+    """Write NETS section (connectivity).
+
+    plc.nets is a dict: {driver_pin_name: [sink_pin_names]}.
+    Pin names are either bare port names (e.g. "p3") or "instance/pin"
+    (e.g. "a7419/IP1").
+    """
     nets = plc.nets
+
+    # Build set of port names for fast lookup
+    port_names = set()
+    for idx in plc.port_indices:
+        port_names.add(plc.modules_w_pins[idx].get_name())
 
     fp.write(f"NETS {len(nets)} ;\n")
 
-    for net_idx, net in enumerate(nets):
+    for net_idx, (driver, sinks) in enumerate(nets.items()):
         net_name = f"net_{net_idx}"
-
-        # Get pins in this net
-        pins = net.pins if hasattr(net, 'pins') else []
-
-        # Build pin list
         pin_connections = []
-        for pin in pins:
-            node_idx = pin.node_idx if hasattr(pin, 'node_idx') else None
-            if node_idx is not None:
-                node = plc.modules_w_pins[node_idx]
-                node_name = node.get_name()
 
-                # Check if it's a port or instance pin
-                if node_idx in plc.port_indices:
-                    pin_connections.append(f"( PIN {node_name} )")
-                else:
-                    # Instance pin (use generic pin name)
-                    pin_connections.append(f"( {node_name} A )")
+        for pin_name in [driver] + sinks:
+            if pin_name in port_names:
+                # I/O port
+                pin_connections.append(f"( PIN {pin_name} )")
+            elif "/" in pin_name:
+                # Instance pin: "instance_name/pin_name"
+                inst, pin = pin_name.split("/", 1)
+                pin_connections.append(f"( {inst} {pin} )")
 
         if pin_connections:
             pins_str = " ".join(pin_connections)

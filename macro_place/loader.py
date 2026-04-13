@@ -13,7 +13,7 @@ from macro_place.benchmark import Benchmark
 
 
 def load_benchmark(
-    netlist_file: str, plc_file: Optional[str] = None
+    netlist_file: str, plc_file: Optional[str] = None, name: Optional[str] = None
 ) -> Tuple[Benchmark, PlacementCost]:
     """
     Load benchmark from ICCAD04 format using PlacementCost parser.
@@ -21,6 +21,7 @@ def load_benchmark(
     Args:
         netlist_file: Path to netlist.pb.txt
         plc_file: Optional path to initial.plc (if None, uses default placement)
+        name: Optional benchmark name override (inferred from path if not given)
 
     Returns:
         Tuple of (Benchmark, PlacementCost) - Benchmark contains PyTorch tensors,
@@ -33,8 +34,16 @@ def load_benchmark(
     if plc_file:
         plc.restore_placement(plc_file, ifInital=True, ifReadComment=True)
 
-    # Extract benchmark name
-    name = os.path.basename(os.path.dirname(netlist_file))
+    # Extract benchmark name from path if not provided.
+    # IBM paths: .../ibm01/netlist.pb.txt  -> "ibm01"
+    # NG45 paths: .../ariane133/netlist/output_CT_Grouping/netlist.pb.txt -> "ariane133"
+    if name is None:
+        name = os.path.basename(os.path.dirname(netlist_file))
+        # NG45 designs have extra subdirectory levels; walk up to find the design name
+        if name in ("output_CT_Grouping", "output_CodeElement"):
+            name = os.path.basename(
+                os.path.dirname(os.path.dirname(os.path.dirname(netlist_file)))
+            )
 
     # Extract canvas and grid info
     canvas_width, canvas_height = plc.get_canvas_width_height()
@@ -115,9 +124,39 @@ def load_benchmark(
     macro_fixed = torch.tensor(macro_fixed, dtype=torch.bool)
 
     # Extract net connectivity
+    # Build mapping from module/port names to benchmark tensor indices:
+    #   hard macros -> [0, num_hard), soft macros -> [num_hard, num_hard+num_soft)
+    #   ports -> num_macros + port_index
+    plc_idx_to_bench = {}
+    for bench_idx, plc_idx in enumerate(hard_macro_plc_indices):
+        plc_idx_to_bench[plc_idx] = bench_idx
+    for bench_idx_offset, plc_idx in enumerate(soft_macro_plc_indices):
+        plc_idx_to_bench[plc_idx] = num_hard + bench_idx_offset
+    for port_offset, plc_idx in enumerate(plc.port_indices):
+        plc_idx_to_bench[plc_idx] = num_macros + port_offset
+
+    # Map pin/module names to benchmark indices via their parent macro/port
+    name_to_bench = {}
+    for plc_idx, bench_idx in plc_idx_to_bench.items():
+        mod = plc.modules_w_pins[plc_idx]
+        name_to_bench[mod.get_name()] = bench_idx
+
     num_nets = int(plc.net_cnt)
     net_nodes = []
-    net_weights_tensor = torch.zeros(num_nets, dtype=torch.float32)
+    net_weights_list = []
+    for driver, sinks in plc.nets.items():
+        nodes_in_net = set()
+        for pin_name in [driver] + sinks:
+            # Pin names are "MACRO/PIN" for macro pins or just "PORT" for ports
+            parent = pin_name.split("/")[0]
+            if parent in name_to_bench:
+                nodes_in_net.add(name_to_bench[parent])
+        if nodes_in_net:
+            net_nodes.append(torch.tensor(sorted(nodes_in_net), dtype=torch.long))
+            net_weights_list.append(1.0)
+
+    num_nets = len(net_nodes)
+    net_weights_tensor = torch.tensor(net_weights_list, dtype=torch.float32) if net_weights_list else torch.zeros(0, dtype=torch.float32)
 
     # Create Benchmark object
     benchmark = Benchmark(

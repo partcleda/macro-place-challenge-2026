@@ -133,7 +133,7 @@ def evaluate_benchmark(placer, name: str, testcase_root: str, ng45_dir: str = No
     if ng45_dir:
         netlist_file = f"{ng45_dir}/netlist.pb.txt"
         plc_file = f"{ng45_dir}/initial.plc"
-        benchmark, plc = load_benchmark(netlist_file, plc_file)
+        benchmark, plc = load_benchmark(netlist_file, plc_file, name=name)
     else:
         benchmark_dir = f"{testcase_root}/{name}"
         benchmark, plc = load_benchmark_from_dir(benchmark_dir)
