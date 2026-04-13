@@ -227,18 +227,18 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 | 1 | "MTK" (DreamPlace++) | **1.3998** | — | — | 0 | 25s/bench | |
 | 2 | "Varun's Parallel Worlds" (GRPlace) | **1.4044** | — | — | 0 | 125s/bench | |
 | 3 | "UT Austin" - AS (DREAMPlace Analytical) | **1.4076** | — | — | 0 | 17s/bench | |
-| 4 | "ByteDancer" (Incremental CD) | **1.4156** | — | — | 0 | 42min/bench | |
+| 4 | "ByteDancer" (Incremental CD) | **1.4151** | 1.0236 | 1.7792 | 0 | 38min/bench | :white_check_mark: |
 | 5 | "BakaBobo" (Spread+Refine) | **1.4403** | — | — | 0 | 212s/bench | |
-| 6 | "Convex Optimization" (UWaterloo Student) | **1.4556** | — | — | 0 | 16s total | |
-| 7 | "another Waterloo kid" (Batched Nesterov GP) | **1.4568** | — | — | 0 | 118s/bench | |
+| ~~6~~ | ~~"Convex Optimization" (UWaterloo Student)~~ | ~~1.4556~~ | — | — | **846** | — | :x: DQ |
+| 6 | "another Waterloo kid" (Batched Nesterov GP) | **1.4568** | — | — | 0 | 118s/bench | |
 | — | RePlAce (baseline) | **1.4578** | 0.9976 | 1.8370 | 0 | — | :white_check_mark: |
-| 8 | "UTAUSTIN-CT" (PLC-Exact Congestion-Aware SA) | **1.5062** | — | — | 0 | 35s/bench | |
-| 9 | "oracleX" (Oracle) | **1.5130** | — | — | 0 | 3min/bench | |
-| 10 | "CA" (congestion_aware) | **1.5238** | — | — | 0 | 13s/bench | |
-| 11 | Will Seed (Partcl) | **1.5338** | 1.1625 | 1.7965 | 0 | 35s total | :white_check_mark: |
-| 12 | "Cezar" (CRISP) | **1.5806** | — | — | 0 | 10min/bench | |
-| 13 | "UT Austin" - RH (DREAMPlace) | **1.6037** | — | — | 0 | 4.5s/bench | |
-| 14 | "UT Austin" - CT (PROXYCost) | **1.8706** | — | — | 0 | 187s/bench | |
+| 7 | "UTAUSTIN-CT" (PLC-Exact Congestion-Aware SA) | **1.5062** | — | — | 0 | 35s/bench | |
+| 8 | "oracleX" (Oracle) | **1.5130** | — | — | 0 | 3min/bench | |
+| 9 | "CA" (congestion_aware) | **1.5238** | — | — | 0 | 13s/bench | |
+| 10 | Will Seed (Partcl) | **1.5338** | 1.1625 | 1.7965 | 0 | 35s total | :white_check_mark: |
+| 11 | "Cezar" (CRISP) | **1.5781** | 1.1896 | 1.8520 | 0 | 4min/bench | :white_check_mark: |
+| 12 | "UT Austin" - RH (DREAMPlace) | **1.6037** | — | — | 0 | 4.5s/bench | |
+| 13 | "UT Austin" - CT (PROXYCost) | **1.8706** | — | — | 0 | 187s/bench | |
 | — | SA (baseline) | 2.1251 | 1.3166 | 3.6726 | 0 | — | :white_check_mark: |
 | — | Greedy Row (demo) | 2.2109 | 1.6728 | 2.7696 | 0 | 0.3s total | :white_check_mark: |
 | — | "Binghamton" (feng shui) | pending | — | — | — | — | |
