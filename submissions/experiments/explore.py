@@ -130,3 +130,20 @@ for m in plc.modules_w_pins:
 
 print(f"One-directional: {one_way}")
 print(f"Both directions: {both_ways}")
+
+names = [m.get_name() for m in plc.modules_w_pins]
+print(f"Total modules: {len(names)}")
+print(f"Unique names: {len(set(names))}")
+
+# compare plc positions vs benchmark tensor for a known macro
+for i, name in enumerate(benchmark.macro_names):
+    if name == "a22":
+        tensor_pos = benchmark.macro_positions[i]
+        plc_pos = pos_map.get("a22")
+        print(f"Tensor: {tensor_pos}")
+        break
+    
+plc_module = pos_map.get("a22")
+print(plc_module.get_pos())
+print(plc_module.x)
+print(plc_module.y)
