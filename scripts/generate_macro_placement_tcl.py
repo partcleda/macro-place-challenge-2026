@@ -138,16 +138,34 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
     per genblk). Instead of guessing, we match at runtime by grouping ODB
     instances by their sram block prefix and assigning linear indices.
 
+    When core_area is provided, proxy canvas coordinates are **scaled** to fill
+    the ORFS core area (the proxy canvas and ORFS die have different dimensions).
+
     Args:
         placement: [num_macros, 2] tensor of (x, y) positions in microns
         benchmark: Benchmark object
         plc: PlacementCost object
         output_file: Output TCL file path
-        core_area: Optional tuple (x_min, y_min, x_max, y_max) to clamp positions
+        core_area: Optional tuple (x_min, y_min, x_max, y_max) to scale+clamp positions
     """
     from collections import defaultdict
 
     placement_np = placement.cpu().numpy()
+
+    # Compute scale factors from proxy canvas to ORFS core
+    canvas_w = float(benchmark.canvas_width)
+    canvas_h = float(benchmark.canvas_height)
+    if core_area is not None:
+        core_x_min, core_y_min, core_x_max, core_y_max = core_area
+        core_w = core_x_max - core_x_min
+        core_h = core_y_max - core_y_min
+        scale_x = core_w / canvas_w
+        scale_y = core_h / canvas_h
+        offset_x = core_x_min
+        offset_y = core_y_min
+        print(f"  Proxy canvas: {canvas_w:.1f} x {canvas_h:.1f}")
+        print(f"  ORFS core:    {core_w:.1f} x {core_h:.1f} (offset {offset_x:.1f}, {offset_y:.1f})")
+        print(f"  Scale factors: {scale_x:.4f} x {scale_y:.4f}")
 
     # Build placement data keyed by (group_prefix, flat_macro_index)
     group_data = defaultdict(dict)  # group_prefix -> {K: (x, y, orient, plc_name)}
@@ -163,8 +181,12 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
         y_ll = y - h / 2
 
         if core_area is not None:
+            # Scale proxy coordinates to ORFS core area
+            x_ll = x_ll * scale_x + offset_x
+            y_ll = y_ll * scale_y + offset_y
+            # Clamp to core bounds with margin for PDN channels
+            # (macro sizes are physical — not scaled)
             margin = 2.0
-            core_x_min, core_y_min, core_x_max, core_y_max = core_area
             x_ll = max(core_x_min + margin, min(x_ll, core_x_max - w - margin))
             y_ll = max(core_y_min + margin, min(y_ll, core_y_max - h - margin))
 
