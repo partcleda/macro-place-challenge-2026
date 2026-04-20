@@ -224,7 +224,7 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
-| 1 | "MTK" (DreamPlace++) | **1.3170** | — | — | 0 | 42s/bench (GPU) | | Updated 4/15; previous version verified at 1.3622 |
+| 1 | "MTK" (DreamPlace++) | **1.2818** | 0.9073 | 1.6529 | 0 | 37s/bench (GPU) | :white_check_mark: | Verified better than self-reported 1.317; beats RePlAce on all 17 benchmarks |
 | 2 | "RoRa" (RipPlace) | **1.3241** | — | — | 0 | 694s/bench | | |
 | 3 | "Mike Gao" (autoresearch) | **1.3255** | — | — | 0 | 16min/bench | | |
 | 4 | "Electric Beatel" (ePlace-Lite) | **1.3913** | 0.9773 | 1.7253 | 0 | 155s/bench (GPU) | :white_check_mark: | |
