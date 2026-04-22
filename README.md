@@ -103,9 +103,10 @@ Baseline numbers are from: [An Updated Assessment of Reinforcement Learning for 
 
 The top 7 submissions by proxy score will be evaluated through the full **OpenROAD flow** on NG45 designs to measure real PnR outcomes: **WNS, TNS, and Area**.
 
-- The **Grand Prize ($20K)** is awarded based on best OpenROAD results among these top submissions.
-- To qualify, you must surpass the SA and RePlAce baselines for WNS, TNS, and Area.
+- The **Grand Prize ($20K)** is awarded to the highest-scoring submission using a **geometric mean of improvement ratios** across WNS, TNS, and Area vs. the average SA/RePlAce baseline.
+- To qualify, submissions must pass a **feasibility gate** — timing (WNS, TNS) cannot regress below both baselines on any design.
 - To avoid overfitting, we will also evaluate on 1-2 hidden NG45 designs.
+- **Full scoring rules: [`SCORING.md`](SCORING.md)**
 
 ## 🚀 Quick Start
 
