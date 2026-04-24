@@ -241,9 +241,12 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
 
     # Post-process: enforce minimum gap between macros for PDN channel routing.
     # PDN metal5 needs ~10μm channels between macros.
+    # NOTE: this modifies the submitted placement at Tier 2. A sidecar diff file
+    # is written so teams can see exactly what the evaluator pushed and by how much.
     if core_area is not None:
         MIN_GAP = 12.0
-        # Collect all placements into a flat list for gap enforcement
+        # Collect all placements into a flat list for gap enforcement.
+        # Each entry: (kind, key1, key2, x, y, w, h, macro_name)
         _all = []
         for gp in group_data:
             for mk in group_data[gp]:
@@ -254,7 +257,7 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
                         node = plc.modules_w_pins[mi]
                         break
                 if node:
-                    _all.append(('group', gp, mk, x, y, node.get_width(), node.get_height()))
+                    _all.append(('group', gp, mk, x, y, node.get_width(), node.get_height(), pn))
         for idx, (odb_n, x, y, orient, pn) in enumerate(direct_placements):
             node = None
             for ii, mi in enumerate(benchmark.hard_macro_indices):
@@ -262,14 +265,17 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
                     node = plc.modules_w_pins[mi]
                     break
             if node:
-                _all.append(('direct', idx, None, x, y, node.get_width(), node.get_height()))
+                _all.append(('direct', idx, None, x, y, node.get_width(), node.get_height(), pn))
+
+        # Snapshot pre-push coordinates for the sidecar diff
+        _before = {entry[7]: (entry[3], entry[4]) for entry in _all}
 
         for iteration in range(50):
             moved = 0
             for i in range(len(_all)):
                 for j in range(i + 1, len(_all)):
-                    ti, ki1, ki2, xi, yi, wi, hi = _all[i]
-                    tj, kj1, kj2, xj, yj, wj, hj = _all[j]
+                    ti, ki1, ki2, xi, yi, wi, hi, pni = _all[i]
+                    tj, kj1, kj2, xj, yj, wj, hj, pnj = _all[j]
                     # Check if too close (overlap + gap < MIN_GAP)
                     ox = min(xi + wi, xj + wj) - max(xi, xj)  # overlap in x
                     oy = min(yi + hi, yj + hj) - max(yi, yj)  # overlap in y
@@ -299,20 +305,47 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
                         yi = max(core_y_min + 2, min(yi, core_y_max - hi - 2))
                         xj = max(core_x_min + 2, min(xj, core_x_max - wj - 2))
                         yj = max(core_y_min + 2, min(yj, core_y_max - hj - 2))
-                        _all[i] = (ti, ki1, ki2, xi, yi, wi, hi)
-                        _all[j] = (tj, kj1, kj2, xj, yj, wj, hj)
+                        _all[i] = (ti, ki1, ki2, xi, yi, wi, hi, pni)
+                        _all[j] = (tj, kj1, kj2, xj, yj, wj, hj, pnj)
             if moved == 0:
                 break
-        if iteration > 0:
-            print(f"  ✓ Spacing enforcement: {iteration + 1} iters, {MIN_GAP}μm min gap")
+
+        # Compute displacements and write sidecar diff
+        moved_rows = []
+        for entry in _all:
+            _, _, _, x_after, y_after, _, _, pn = entry
+            x_before, y_before = _before[pn]
+            dx = x_after - x_before
+            dy = y_after - y_before
+            mag = (dx * dx + dy * dy) ** 0.5
+            if mag > 1e-6:
+                moved_rows.append((pn, x_before, y_before, x_after, y_after, dx, dy, mag))
+
+        if moved_rows:
+            moved_rows.sort(key=lambda r: -r[7])
+            diff_path = str(output_file) + ".spacing_diff.txt"
+            with open(diff_path, "w") as dfh:
+                dfh.write(f"# Post-push spacing adjustment (Tier 2 only, MIN_GAP={MIN_GAP}μm)\n")
+                dfh.write(f"# Submitted placement had {len(moved_rows)}/{len(_all)} macros "
+                          f"with <{MIN_GAP}μm clearance to a neighbour; pushed apart below.\n")
+                dfh.write(f"# Columns: macro  x_before  y_before  x_after  y_after  dx  dy  |Δ|\n")
+                for pn, xb, yb, xa, ya, dx, dy, mag in moved_rows:
+                    dfh.write(f"{pn}\t{xb:.3f}\t{yb:.3f}\t{xa:.3f}\t{ya:.3f}\t"
+                              f"{dx:+.3f}\t{dy:+.3f}\t{mag:.3f}\n")
+            max_disp = moved_rows[0][7]
+            mean_disp = sum(r[7] for r in moved_rows) / len(moved_rows)
+            print(f"  ✓ Spacing enforcement: {iteration + 1} iters, {MIN_GAP}μm min gap, "
+                  f"{len(moved_rows)}/{len(_all)} macros moved "
+                  f"(mean |Δ|={mean_disp:.2f}μm, max |Δ|={max_disp:.2f}μm)")
+            print(f"    sidecar diff: {diff_path}")
 
         # Write back
-        for t, k1, k2, x, y, w, h in _all:
+        for t, k1, k2, x, y, w, h, pn in _all:
             if t == 'group':
-                _, _, orient, pn = group_data[k1][k2]
+                _, _, orient, _ = group_data[k1][k2]
                 group_data[k1][k2] = (x, y, orient, pn)
             elif t == 'direct':
-                odb_n, _, _, orient, pn = direct_placements[k1]
+                odb_n, _, _, orient, _ = direct_placements[k1]
                 direct_placements[k1] = (odb_n, x, y, orient, pn)
 
     with open(output_file, 'w') as f:

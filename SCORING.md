@@ -68,7 +68,14 @@ cause is on our side (evaluator bug, netlist issue) or on the placer's side
 
 The evaluator auto-handles the following on behalf of placers:
 - Snap macro positions to the manufacturing grid
-- Enforce 12 μm PDN channel gap between macros
+- Iteratively push macros apart to maintain ≥12 μm clearance (PDN channel
+  routing needs ~10 μm between adjacent macros). This happens **only at
+  Tier 2**, after scaling the placement to ORFS core coordinates; Tier 1
+  proxy cost uses your submitted coordinates unchanged. The pre- and
+  post-push coordinates are logged to a sidecar `macros.tcl.spacing_diff.txt`
+  in the ORFS results directory so you can see exactly what was moved and
+  by how much. To keep full control over Tier 2 coordinates, leave ≥12 μm
+  between macros in your submitted placement.
 - Instance name escaping for Genus netlists
 
 The placer is responsible for: zero overlaps, staying within canvas bounds,
