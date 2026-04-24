@@ -66,6 +66,27 @@ TNS_sub ≥ min(TNS_SA, TNS_RP)
 
 ---
 
+## Handling ORFS Failures
+
+If OpenROAD fails on any design (exits non-zero before producing WNS/TNS/Area),
+the submission is technically disqualified from the Grand Prize. In practice,
+we will reach out and work with the team to resolve the failure — whether the
+cause is on our side (evaluator bug, netlist issue) or on the placer's side
+(a placement choice ORFS can't route through).
+
+The evaluator auto-handles the following on behalf of placers:
+- Snap macro positions to the manufacturing grid
+- Enforce 12 μm PDN channel gap between macros
+- Instance name escaping for Genus netlists
+
+The placer is responsible for: zero overlaps, staying within canvas bounds,
+macro orientation choices, and any other decisions that affect downstream
+ORFS routability.
+
+Tier 1 (Proxy Prize) ranking is unaffected by Tier 2 / ORFS outcomes.
+
+---
+
 ## Stage 2 — Scoring (Geometric Mean of Ratios)
 
 All feasible submissions are ranked using a **single scalar score** computed from improvement ratios. This approach:
