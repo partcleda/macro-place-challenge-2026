@@ -447,39 +447,21 @@ set_output_delay -clock core_clock 0 [all_outputs]
                         genus_raw = re.sub(r'^module\s*\n\s+', 'module ', genus_raw, flags=re.MULTILINE)
                         patched_netlist.write_text(genus_raw)
 
-                        # Patch: add missing module definitions from RTL (issue #65).
+                        # Patch: add missing gate-level module definitions (issue #65).
                         # Genus netlist references lzc_MODE1_WIDTH64, lzc_WIDTH3, lzc_WIDTH4
-                        # but their definitions were stripped. Extract from RTL and rename.
-                        rtl_file = orfs_config_dir / "ariane.v"
-                        if rtl_file.exists():
-                            rtl_text = rtl_file.read_text()
+                        # but their definitions were stripped. Use pre-synthesized gate-level patches.
+                        lzc_patch_file = Path(__file__).parent / "ariane133_lzc_patches.v"
+                        if lzc_patch_file.exists():
                             genus_text = patched_netlist.read_text()
-                            # Map: Genus name -> (RTL name, start pattern, end pattern)
-                            lzc_fixes = {
-                                'lzc_MODE1_WIDTH64': 'lzc_WIDTH64_MODE1',
-                                'lzc_WIDTH3': 'lzc_00000003',
-                                'lzc_WIDTH4': 'lzc_00000004',
-                            }
-                            patches = []
-                            for genus_name, rtl_name in lzc_fixes.items():
-                                if genus_name in genus_text and f"module {genus_name}" not in genus_text:
-                                    # Extract module from RTL
-                                    start = rtl_text.find(f"module {rtl_name}")
-                                    if start >= 0:
-                                        end = rtl_text.find("endmodule", start)
-                                        if end >= 0:
-                                            module_body = rtl_text[start:end + len("endmodule")]
-                                            # Rename module
-                                            module_body = module_body.replace(
-                                                f"module {rtl_name}", f"module {genus_name}", 1
-                                            )
-                                            patches.append(module_body)
-                                            print(f"  ✓ Patched missing module: {genus_name} (from RTL {rtl_name})")
-                            if patches:
+                            patch_text = lzc_patch_file.read_text()
+                            # Only append modules that are referenced but not defined
+                            needed = [m for m in ['lzc_MODE1_WIDTH64', 'lzc_WIDTH3', 'lzc_WIDTH4']
+                                      if m in genus_text and f"module {m}" not in genus_text]
+                            if needed:
                                 with open(patched_netlist, 'a') as pf:
-                                    pf.write("\n// --- Patched missing modules from RTL ---\n")
-                                    for p in patches:
-                                        pf.write(p + "\n\n")
+                                    pf.write(f"\n// --- Gate-level patches for {', '.join(needed)} ---\n")
+                                    pf.write(patch_text)
+                                print(f"  ✓ Patched {len(needed)} missing modules: {', '.join(needed)}")
 
                         config_content += (
                             f"\n# Override: use patched Genus gate netlist ({n_sram} SRAMs)\n"
