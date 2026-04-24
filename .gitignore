@@ -87,7 +87,6 @@ scripts/run_random_ibm.py
 scripts/run_rowpack_ibm.py
 scripts/visualize_*.py
 scripts/__pycache__/
-src/orfs_integration/
 docs/
 output/
 BENCHMARK_EVALUATION_RESULTS.md
