@@ -402,9 +402,13 @@ dict for {prefix entries} $_odb_groups {
                 f.write(f'set _inst [_find_macro $block "{tcl_name}"]\n')
                 f.write(f'if {{$_inst ne "NULL"}} {{\n')
                 # Use the inst object directly to place — avoids name escaping issues
-                f.write(f'    set _loc [odb::dbInst_getLocation $_inst]\n')
+                # Snap to manufacturing grid (10 DBU) to avoid DRT-0416 offgrid errors
+                f.write(f'    set _x [ord::microns_to_dbu {x_ll:.6f}]\n')
+                f.write(f'    set _y [ord::microns_to_dbu {y_ll:.6f}]\n')
+                f.write(f'    set _grid [[ord::get_db_tech] getManufacturingGrid]\n')
+                f.write(f'    if {{$_grid > 0}} {{ set _x [expr {{($_x / $_grid) * $_grid}}]; set _y [expr {{($_y / $_grid) * $_grid}}] }}\n')
                 f.write(f'    $_inst setOrient {orient}\n')
-                f.write(f'    $_inst setLocation [ord::microns_to_dbu {x_ll:.6f}] [ord::microns_to_dbu {y_ll:.6f}]\n')
+                f.write(f'    $_inst setLocation $_x $_y\n')
                 f.write(f'    $_inst setPlacementStatus FIRM\n')
                 f.write(f'    incr _placed\n')
                 f.write(f'}} else {{\n')
