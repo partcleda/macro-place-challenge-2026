@@ -1,14 +1,6 @@
 # Macro Placement Challenge — Grand Prize Scoring Rules (v2.0)
 
-This document defines the **deterministic, rules-based evaluation system** for the Grand Prize ($20,000).
-
-The goal is simple:
-- No ambiguity
-- No post-hoc decisions
-
-All submissions are evaluated using **mechanical scoring rules** applied to outputs from a shared evaluation pipeline.
-
----
+This document defines the evaluation system for the Grand Prize ($20,000).
 
 ## Overview
 
