@@ -39,7 +39,7 @@ for name in BENCHMARKS:
     print(f"{name:<12} {costs['proxy_cost']:>8.4f} {costs['wirelength_cost']:>8.4f} {costs['density_cost']:>8.4f} {costs['congestion_cost']:>8.4f} {costs['overlap_count']:>10}")
     
     img_name = name + ".png"
-    img_path = Path("submissions/src/images") / name
+    img_path = Path("vis/basic_graph") / name
     # visualize
     visualize_placement(placement, benchmark, save_path=str(img_path))
     
