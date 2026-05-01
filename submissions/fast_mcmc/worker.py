@@ -13,6 +13,7 @@ from fast_eval import (
     grid_insert_macro,
     grid_remove_macro,
     hpwl_for_net,
+    init_grid,
     macro_density_score,
     total_hpwl,
 )
@@ -47,12 +48,78 @@ def _clamp(cx: float, cy: float, hw: float, hh: float, cw: float, ch: float) -> 
 def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
     rng = np.random.default_rng(cfg.seed)
 
-    pos, grid, counts, wl = grasp_initialize(
-        st, seed=cfg.seed, rows=cfg.rows, cols=cfg.cols, max_per_bin=cfg.max_per_bin, gap=cfg.gap
-    )
-
     bin_w = st.canvas_w / cfg.cols
     bin_h = st.canvas_h / cfg.rows
+
+    # Worker 0 (seed=0) starts from the original placement to preserve routing topology.
+    # Other workers use randomized/legalized init to explore diverse global states.
+    if int(cfg.seed) == 0:
+        pos = st.pos_xy.copy()
+        grid, counts = init_grid(cfg.rows, cfg.cols, cfg.max_per_bin)
+        ok = True
+
+        # Build the initial spatial grid, nudging only if overlaps exist.
+        for i in range(st.n_hard):
+            hw = float(st.half_w[i])
+            hh = float(st.half_h[i])
+            cx, cy = _clamp(float(pos[i, 0]), float(pos[i, 1]), hw, hh, st.canvas_w, st.canvas_h)
+            pos[i, 0] = cx
+            pos[i, 1] = cy
+
+            if grid_has_overlap_for_macro(
+                pos, st.half_w, st.half_h, grid, counts, i, cx, cy, bin_w, bin_h, cfg.rows, cfg.cols, cfg.gap
+            ):
+                # Quick greedy legalizer: spiral search around the original location.
+                found = False
+                step = (max(hw * 2.0, hh * 2.0) * 0.5) + cfg.gap
+                for r in range(1, 160):
+                    for dxm in range(-r, r + 1):
+                        for dym in range(-r, r + 1):
+                            if abs(dxm) != r and abs(dym) != r:
+                                continue
+                            tx, ty = _clamp(cx + dxm * step, cy + dym * step, hw, hh, st.canvas_w, st.canvas_h)
+                            if not grid_has_overlap_for_macro(
+                                pos,
+                                st.half_w,
+                                st.half_h,
+                                grid,
+                                counts,
+                                i,
+                                tx,
+                                ty,
+                                bin_w,
+                                bin_h,
+                                cfg.rows,
+                                cfg.cols,
+                                cfg.gap,
+                            ):
+                                cx, cy = tx, ty
+                                pos[i, 0] = cx
+                                pos[i, 1] = cy
+                                found = True
+                                break
+                        if found:
+                            break
+                    if found:
+                        break
+                if not found:
+                    ok = False
+                    break
+
+            if not grid_insert_macro(grid, counts, i, cx, cy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols):
+                ok = False
+                break
+
+        if not ok:
+            pos, grid, counts, wl = grasp_initialize(
+                st, seed=cfg.seed, rows=cfg.rows, cols=cfg.cols, max_per_bin=cfg.max_per_bin, gap=cfg.gap
+            )
+        else:
+            wl = float(total_hpwl(pos, st.net_ptr, st.net_macros))
+    else:
+        pos, grid, counts, wl = grasp_initialize(
+            st, seed=cfg.seed, rows=cfg.rows, cols=cfg.cols, max_per_bin=cfg.max_per_bin, gap=cfg.gap
+        )
 
     movable_idx = np.where(st.movable)[0]
     if len(movable_idx) == 0:
@@ -91,6 +158,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
     Tend = canvas * 0.0008
     # SA acceptance uses HPWL plus a density proxy; weight decays slightly with T, never hits zero
     density_w0 = float(canvas * 3e-4 * 80.0)
+    target_density_w = float(density_w0 * 0.62)
 
     start = time.time()
     best_pos = pos.copy()
@@ -114,7 +182,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
                 cfg.cols,
             )
         )
-    best_cost = float(best_wl + density_w0 * cur_density)
+    best_cost = float(best_wl + target_density_w * cur_density)
 
     debug = os.getenv("FAST_MCMC_DEBUG", "0").strip().lower() not in ("0", "false", "no", "")
     log_every = int(os.getenv("FAST_MCMC_LOG_EVERY", "20000"))
@@ -145,6 +213,9 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         frac = min(1.0, (now - start) / max(1e-9, cfg.time_limit_s))
         T = T0 * ((Tend / T0) ** frac)
         density_weight = density_w0 * (0.62 + 0.38 * (T / T0))
+        t_ratio = T / T0
+        jump_prob = 0.22 * t_ratio
+        shift_prob = 0.70 + 0.22 * (1.0 - t_ratio)
 
         if debug:
             do_log = False
@@ -204,12 +275,13 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         hh = float(st.half_h[m])
 
         move_type = rng.random()
-        if move_type < 0.70:
+        if move_type < shift_prob:
             # SHIFT
-            sigma = (0.20 + 0.80 * (1.0 - frac)) * T
+            min_sigma = canvas * 0.005
+            sigma = max(min_sigma, (0.20 + 0.80 * (1.0 - frac)) * T)
             nx = oldx + rng.normal(0.0, sigma)
             ny = oldy + rng.normal(0.0, sigma)
-        elif move_type < 0.92:
+        elif move_type < shift_prob + jump_prob:
             # JUMP (global)
             nx = rng.random() * st.canvas_w
             ny = rng.random() * st.canvas_h
@@ -276,7 +348,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
 
             cur_wl += d_hpwl
             cur_density += delta_density
-            cur_cost = float(cur_wl + density_w0 * cur_density)
+            cur_cost = float(cur_wl + target_density_w * cur_density)
             if cur_cost < best_cost:
                 best_cost = cur_cost
                 best_wl = float(cur_wl)
@@ -313,7 +385,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
 
         cur_wl += d_hpwl
         cur_density += delta_density
-        cur_cost = float(cur_wl + density_w0 * cur_density)
+        cur_cost = float(cur_wl + target_density_w * cur_density)
         if cur_cost < best_cost:
             best_cost = cur_cost
             best_wl = float(cur_wl)
