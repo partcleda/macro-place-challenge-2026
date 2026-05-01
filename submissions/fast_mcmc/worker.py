@@ -232,6 +232,10 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
             if grid_has_overlap_for_macro(pos, st.half_w, st.half_h, grid, counts, j, j_nx, j_ny, bin_w, bin_h, cfg.rows, cfg.cols, cfg.gap):
                 continue
 
+            # Remove both before density evaluation (avoid self-footprint leakage)
+            grid_remove_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
+            grid_remove_macro(grid, counts, j, j_oldx, j_oldy, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
+
             # wl delta: two moves
             eval_total += 1
             d1 = float(
@@ -257,14 +261,14 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
             d = d_hpwl + density_weight * delta_density
             accept = d <= 0.0 or rng.random() < math.exp(-d / max(1e-12, T))
             if not accept:
+                grid_insert_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
+                grid_insert_macro(grid, counts, j, j_oldx, j_oldy, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
                 continue
             acc_total += 1
             if d > 0.0:
                 acc_uphill += 1
 
             # apply swap: update grid for both
-            grid_remove_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
-            grid_remove_macro(grid, counts, j, j_oldx, j_oldy, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
             pos[m, 0], pos[m, 1] = nx, ny
             pos[j, 0], pos[j, 1] = j_nx, j_ny
             grid_insert_macro(grid, counts, m, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
@@ -284,6 +288,9 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         if grid_has_overlap_for_macro(pos, st.half_w, st.half_h, grid, counts, m, nx, ny, bin_w, bin_h, cfg.rows, cfg.cols, cfg.gap):
             continue
 
+        # Remove before density evaluation (avoid self-footprint leakage)
+        grid_remove_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
+
         eval_total += 1
         d_hpwl = float(
             delta_hpwl_for_macro_move(pos, st.net_ptr, st.net_macros, st.macro_net_ptr, st.macro_nets, m, nx, ny)
@@ -294,13 +301,13 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         d = d_hpwl + density_weight * delta_density
         accept = d <= 0.0 or rng.random() < math.exp(-d / max(1e-12, T))
         if not accept:
+            grid_insert_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
             continue
         acc_total += 1
         if d > 0.0:
             acc_uphill += 1
 
         # apply move
-        grid_remove_macro(grid, counts, m, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
         pos[m, 0], pos[m, 1] = nx, ny
         grid_insert_macro(grid, counts, m, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
 
