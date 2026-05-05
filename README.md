@@ -236,7 +236,7 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 | 4 | "Hoop Dreams" (DREAMTuna) | **1.2206** | — | — | 0 | 20min/bench | | New 5/1; DREAMPlace + Bayesian optimization (Optuna) hyperparameter sweep |
 | 5 | "Shoom" (MultiDreamPlace v2) | **1.2353** | — | — | 0 | 42min/bench | | Resubmitted 5/1 with multi-start + fine tuning (was 1.3381) |
 | 6 | "ArzunPD" (MacroWeave SA+LNS) | **1.2478** | — | — | 0 | 55min/bench | | Resubmitted 5/1 (was HyperPlace, verified 1.4421 with networkit-disabled Stage 5). Re-verification pending. |
-| 7 | "RoRa" (RoomPlace) | **1.2723** | — | — | 0 | ~700s/bench | | Resubmitted 5/1 (canvas-shrink approach); previous RipPlace was blocked on `place(plc=...)` signature. Re-verification pending. |
+| 7 | "RoRa" (RoomPlace) | **1.2788** | 0.9577 | 1.6222 | 0 | 2.6h total | :white_check_mark: | Verified 1.2788 (self-reported 1.2723 — 0.5% match); resubmitted 5/1 with canvas-shrink approach (previous RipPlace was blocked on `place(plc=...)` signature) |
 | 8 | "William Zhang" (RePlAce++) | **1.2767** | — | — | 0 | 259s/bench | | Resubmitted 5/2 (was "Convex Optimization", verified 1.4556); blocked on missing `casadi` module in eval container. Re-verification pending fix. |
 | 9 | "MTK" (DreamPlace++) | **1.2818** | 0.9073 | 1.6529 | 0 | 37s/bench (GPU) | :white_check_mark: | Verified better than self-reported 1.317; beats RePlAce on all 17 benchmarks |
 | 10 | "Electric Beatle" (ePlace-Lite) | **1.3253** | — | — | 0 | 2000s/bench (GPU) | | Resubmitted 4/30 (was verified 1.3913); Adam-based stochastic descent + multi-start hyperparameter sweep. Re-verification pending. |
