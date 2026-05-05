@@ -230,8 +230,8 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
-| 1 | "Cezar" (ReFine) | **1.037** | — | — | 0 | 55min/bench | | Resubmitted 5/3; new approach (DREAMPlace-style differentiable refinement, normal .py instead of obfuscated). Previous ReFine variant was verified 1.2224 vs self-reported 1.0666. Re-verification pending. |
-| 2 | "vmallela" (LSJ) | **1.1** | — | — | 0 | 40min/bench | | Resubmitted 5/3 (Hessian negative-eigenvalue saddle escape branch). Previous Incremental CD+LNS verified at 1.4152 vs self-reported 1.1172. Re-verification pending. |
+| 1 | "vmallela" (LSJ) | **1.0109** | 0.7644 | 1.2921 | 0 | 15.5h total | :white_check_mark: | Verified 1.0109 (self-reported 1.1 — 8.1% BETTER than self-reported). Wins all 17 benchmarks vs every other verified entry. Hessian negative-eigenvalue saddle escape (`vmallela_v7` branch). Previous Incremental CD+LNS verified 1.4152. |
+| 2 | "Cezar" (ReFine) | **1.037** | — | — | 0 | 55min/bench | | Resubmitted 5/3; new approach (DREAMPlace-style differentiable refinement, normal .py instead of obfuscated). Previous ReFine variant was verified 1.2224 vs self-reported 1.0666. Re-verification pending. |
 | 3 | "KLA MACH" (ProxCD) | **1.2121** | 0.8527 | 1.6532 | 0 | 2h15min total | :white_check_mark: | Verified 1.2121 (self-reported 1.2355 — 1.9% better than self-report). Phase 20 ProxCD: numpy/Numba proxy + multi-start coordinate descent + LNS. Consolidates all chuanqi.chen submissions (UTDA / Chuanqi Chen / KLA MACH). |
 | 4 | "Hoop Dreams" (DREAMTuna) | **1.2206** | — | — | 0 | 20min/bench | | New 5/1; DREAMPlace + Bayesian optimization (Optuna) hyperparameter sweep |
 | 5 | "Shoom" (MultiDreamPlace v2) | **1.2353** | — | — | 0 | 42min/bench | | Resubmitted 5/1 with multi-start + fine tuning (was 1.3381) |
