@@ -125,7 +125,42 @@ def _plc_extract_group_and_index(plc_name):
     return prefix, macro_idx
 
 
-def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area=None):
+def _plc_to_odb_name(plc_name):
+    """Convert a .plc hierarchical name to the Yosys-flattened ODB instance name.
+
+    Yosys flattens generate blocks by replacing brackets and dots within
+    a hierarchy level with underscores, but keeps '/' as the hierarchy separator.
+
+    Rules (observed from ODB dumps):
+      '[N].' -> '_N__'   (generate index followed by dot)
+      '.'    -> '_'      (dot within a hierarchy level, NOT hierarchy separator)
+      '/'    -> '/'      (hierarchy separator preserved)
+
+    Examples:
+      i_tile/gen_banks[3].mem_bank/genblk1.sram_instance
+        -> i_tile/gen_banks_3__mem_bank/genblk1_sram_instance
+
+      i_tile/gen_caches[0].i_snitch_icache/i_lookup/i_data/genblk1.fr_sp_instance0
+        -> i_tile/gen_caches_0__i_snitch_icache/i_lookup/i_data/genblk1_fr_sp_instance0
+
+      u_NV_NVDLA_cbuf/u_cbuf_ram_bank0_ram0/rmod/rmod_a
+        -> u_NV_NVDLA_cbuf/u_cbuf_ram_bank0_ram0/rmod/rmod_a  (no change)
+    """
+    # Split by hierarchy separator first
+    parts = plc_name.split('/')
+    result = []
+    for part in parts:
+        # Handle [N]. pattern (generate index)
+        part = re.sub(r'\[(\d+)\]\.', r'_\1__', part)
+        # Handle [N] at end of segment
+        part = re.sub(r'\[(\d+)\]$', r'_\1_', part)
+        # Remaining dots within the segment become underscores
+        part = part.replace('.', '_')
+        result.append(part)
+    return '/'.join(result)
+
+
+def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area=None, use_genus_names=False):
     """
     Write macro placement in ORFS format using place_macro command.
 
@@ -138,6 +173,10 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
     per genblk). Instead of guessing, we match at runtime by grouping ODB
     instances by their sram block prefix and assigning linear indices.
 
+    When use_genus_names=True, bypasses the genblk matching and uses the raw
+    .plc hierarchical names directly (for Genus-mapped gate netlists which
+    preserve the original hierarchy).
+
     When core_area is provided, proxy canvas coordinates are **scaled** to fill
     the ORFS core area (the proxy canvas and ORFS die have different dimensions).
 
@@ -147,6 +186,7 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
         plc: PlacementCost object
         output_file: Output TCL file path
         core_area: Optional tuple (x_min, y_min, x_max, y_max) to scale+clamp positions
+        use_genus_names: If True, use raw .plc names for placement (Genus netlists)
     """
     from collections import defaultdict
 
@@ -169,6 +209,7 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
 
     # Build placement data keyed by (group_prefix, flat_macro_index)
     group_data = defaultdict(dict)  # group_prefix -> {K: (x, y, orient, plc_name)}
+    direct_placements = []  # For non-Ariane designs: (odb_name, x, y, orient, plc_name)
     total_macros = 0
 
     for i, macro_idx in enumerate(benchmark.hard_macro_indices):
@@ -191,13 +232,132 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
             y_ll = max(core_y_min + margin, min(y_ll, core_y_max - h - margin))
 
         orientation = node.get_orientation() if node.get_orientation() else "R0"
-        group_prefix, macro_k = _plc_extract_group_and_index(plc_name)
 
-        if group_prefix is not None:
-            group_data[group_prefix][macro_k] = (x_ll, y_ll, orientation, plc_name)
+        if use_genus_names:
+            # ODB always flattens to underscores regardless of netlist source
+            odb_name = _plc_to_odb_name(plc_name)
+            direct_placements.append((odb_name, x_ll, y_ll, orientation, plc_name))
             total_macros += 1
         else:
-            print(f"  WARNING: Could not parse .plc name: {plc_name}")
+            group_prefix, macro_k = _plc_extract_group_and_index(plc_name)
+
+            if group_prefix is not None:
+                group_data[group_prefix][macro_k] = (x_ll, y_ll, orientation, plc_name)
+                total_macros += 1
+            else:
+                # Fallback: convert plc name directly to ODB name (mempool_tile, nvdla, etc.)
+                odb_name = _plc_to_odb_name(plc_name)
+                direct_placements.append((odb_name, x_ll, y_ll, orientation, plc_name))
+                total_macros += 1
+
+    # Post-process: enforce minimum gap between macros for PDN channel routing.
+    # PDN metal5 needs ~10μm channels between macros.
+    # NOTE: this modifies the submitted placement at Tier 2. A sidecar diff file
+    # is written so teams can see exactly what the evaluator pushed and by how much.
+    if core_area is not None:
+        MIN_GAP = 12.0
+        # Collect all placements into a flat list for gap enforcement.
+        # Each entry: (kind, key1, key2, x, y, w, h, macro_name)
+        _all = []
+        for gp in group_data:
+            for mk in group_data[gp]:
+                x, y, orient, pn = group_data[gp][mk]
+                node = None
+                for ii, mi in enumerate(benchmark.hard_macro_indices):
+                    if plc.modules_w_pins[mi].get_name() == pn:
+                        node = plc.modules_w_pins[mi]
+                        break
+                if node:
+                    _all.append(('group', gp, mk, x, y, node.get_width(), node.get_height(), pn))
+        for idx, (odb_n, x, y, orient, pn) in enumerate(direct_placements):
+            node = None
+            for ii, mi in enumerate(benchmark.hard_macro_indices):
+                if plc.modules_w_pins[mi].get_name() == pn:
+                    node = plc.modules_w_pins[mi]
+                    break
+            if node:
+                _all.append(('direct', idx, None, x, y, node.get_width(), node.get_height(), pn))
+
+        # Snapshot pre-push coordinates for the sidecar diff
+        _before = {entry[7]: (entry[3], entry[4]) for entry in _all}
+
+        for iteration in range(50):
+            moved = 0
+            for i in range(len(_all)):
+                for j in range(i + 1, len(_all)):
+                    ti, ki1, ki2, xi, yi, wi, hi, pni = _all[i]
+                    tj, kj1, kj2, xj, yj, wj, hj, pnj = _all[j]
+                    # Check if too close (overlap + gap < MIN_GAP)
+                    ox = min(xi + wi, xj + wj) - max(xi, xj)  # overlap in x
+                    oy = min(yi + hi, yj + hj) - max(yi, yj)  # overlap in y
+                    if ox > -MIN_GAP and oy > -MIN_GAP and (ox > 0 or oy > 0):
+                        # They're too close — push apart
+                        cx_i, cy_i = xi + wi / 2, yi + hi / 2
+                        cx_j, cy_j = xj + wj / 2, yj + hj / 2
+                        dx, dy = cx_i - cx_j, cy_i - cy_j
+                        if abs(dx) >= abs(dy):
+                            need = (wi + wj) / 2 + MIN_GAP
+                            if abs(dx) < need:
+                                shift = (need - abs(dx)) / 2 + 0.1
+                                sign = 1 if dx >= 0 else -1
+                                xi += sign * shift
+                                xj -= sign * shift
+                                moved += 1
+                        else:
+                            need = (hi + hj) / 2 + MIN_GAP
+                            if abs(dy) < need:
+                                shift = (need - abs(dy)) / 2 + 0.1
+                                sign = 1 if dy >= 0 else -1
+                                yi += sign * shift
+                                yj -= sign * shift
+                                moved += 1
+                        # Clamp
+                        xi = max(core_x_min + 2, min(xi, core_x_max - wi - 2))
+                        yi = max(core_y_min + 2, min(yi, core_y_max - hi - 2))
+                        xj = max(core_x_min + 2, min(xj, core_x_max - wj - 2))
+                        yj = max(core_y_min + 2, min(yj, core_y_max - hj - 2))
+                        _all[i] = (ti, ki1, ki2, xi, yi, wi, hi, pni)
+                        _all[j] = (tj, kj1, kj2, xj, yj, wj, hj, pnj)
+            if moved == 0:
+                break
+
+        # Compute displacements and write sidecar diff
+        moved_rows = []
+        for entry in _all:
+            _, _, _, x_after, y_after, _, _, pn = entry
+            x_before, y_before = _before[pn]
+            dx = x_after - x_before
+            dy = y_after - y_before
+            mag = (dx * dx + dy * dy) ** 0.5
+            if mag > 1e-6:
+                moved_rows.append((pn, x_before, y_before, x_after, y_after, dx, dy, mag))
+
+        if moved_rows:
+            moved_rows.sort(key=lambda r: -r[7])
+            diff_path = str(output_file) + ".spacing_diff.txt"
+            with open(diff_path, "w") as dfh:
+                dfh.write(f"# Post-push spacing adjustment (Tier 2 only, MIN_GAP={MIN_GAP}μm)\n")
+                dfh.write(f"# Submitted placement had {len(moved_rows)}/{len(_all)} macros "
+                          f"with <{MIN_GAP}μm clearance to a neighbour; pushed apart below.\n")
+                dfh.write(f"# Columns: macro  x_before  y_before  x_after  y_after  dx  dy  |Δ|\n")
+                for pn, xb, yb, xa, ya, dx, dy, mag in moved_rows:
+                    dfh.write(f"{pn}\t{xb:.3f}\t{yb:.3f}\t{xa:.3f}\t{ya:.3f}\t"
+                              f"{dx:+.3f}\t{dy:+.3f}\t{mag:.3f}\n")
+            max_disp = moved_rows[0][7]
+            mean_disp = sum(r[7] for r in moved_rows) / len(moved_rows)
+            print(f"  ✓ Spacing enforcement: {iteration + 1} iters, {MIN_GAP}μm min gap, "
+                  f"{len(moved_rows)}/{len(_all)} macros moved "
+                  f"(mean |Δ|={mean_disp:.2f}μm, max |Δ|={max_disp:.2f}μm)")
+            print(f"    sidecar diff: {diff_path}")
+
+        # Write back
+        for t, k1, k2, x, y, w, h, pn in _all:
+            if t == 'group':
+                _, _, orient, _ = group_data[k1][k2]
+                group_data[k1][k2] = (x, y, orient, pn)
+            elif t == 'direct':
+                odb_n, _, _, orient, _ = direct_placements[k1]
+                direct_placements[k1] = (odb_n, x, y, orient, pn)
 
     with open(output_file, 'w') as f:
         f.write("# Macro Placement for OpenROAD-flow-scripts\n")
@@ -264,6 +424,46 @@ dict for {prefix entries} $_odb_groups {
 }
 
 """)
+
+        # Direct placements for non-Ariane designs or Genus netlists
+        if direct_placements:
+            f.write("# Direct placements\n")
+            f.write("set block [ord::get_db_block]\n" if not group_data else "")
+            f.write("# Try multiple name forms to find each macro instance\n")
+            f.write("proc _find_macro {block args} {\n")
+            f.write("    foreach name $args {\n")
+            f.write("        set inst [$block findInst $name]\n")
+            f.write("        if {$inst ne \"NULL\"} { return $inst }\n")
+            f.write("    }\n")
+            f.write("    return NULL\n")
+            f.write("}\n\n")
+            for odb_name, x_ll, y_ll, orient, plc_name in direct_placements:
+                # Try: 1) converted ODB name, 2) with escaped brackets, 3) raw plc name
+                candidates = [odb_name]
+                if plc_name != odb_name:
+                    # Also try escaped-bracket version for Genus netlists
+                    escaped = plc_name.replace('[', '\\[').replace(']', '\\]')
+                    candidates.append(escaped)
+                    candidates.append(plc_name)
+                tcl_args = ' '.join(f'"{c}"' for c in candidates)
+                f.write(f'# {plc_name}\n')
+                f.write(f'set _inst [_find_macro $block {tcl_args}]\n')
+                f.write(f'if {{$_inst ne "NULL"}} {{\n')
+                # Use the inst object directly to place — avoids name escaping issues
+                # Snap to manufacturing grid (10 DBU) to avoid DRT-0416 offgrid errors
+                f.write(f'    set _x [ord::microns_to_dbu {x_ll:.6f}]\n')
+                f.write(f'    set _y [ord::microns_to_dbu {y_ll:.6f}]\n')
+                f.write(f'    set _grid [[ord::get_db_tech] getManufacturingGrid]\n')
+                f.write(f'    if {{$_grid > 0}} {{ set _x [expr {{($_x / $_grid) * $_grid}}]; set _y [expr {{($_y / $_grid) * $_grid}}] }}\n')
+                f.write(f'    $_inst setOrient {orient}\n')
+                f.write(f'    $_inst setLocation $_x $_y\n')
+                f.write(f'    $_inst setPlacementStatus FIRM\n')
+                f.write(f'    incr _placed\n')
+                f.write(f'}} else {{\n')
+                f.write(f'    puts "WARNING: ODB instance not found: {odb_name}"\n')
+                f.write(f'}}\n')
+            f.write("\n")
+
         f.write(f'puts "Placed $_placed macros (expected {total_macros})"\n')
         f.write(f'if {{$_placed != {total_macros}}} {{\n')
         f.write(f'    puts "WARNING: Expected {total_macros} macros but placed $_placed"\n')
@@ -273,8 +473,10 @@ dict for {prefix entries} $_odb_groups {
         f.write('    }\n')
         f.write("}\n")
 
+    n_genblk = len(group_data)
+    n_direct = len(direct_placements)
     print(f"✓ Generated ORFS macro placement TCL: {output_file}")
-    print(f"  {total_macros} macros across {len(group_data)} sram groups")
+    print(f"  {total_macros} macros ({n_genblk} sram groups, {n_direct} direct placements)")
 
 
 def main():
