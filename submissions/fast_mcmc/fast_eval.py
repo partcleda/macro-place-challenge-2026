@@ -105,30 +105,6 @@ def grid_insert_macro(
 
 
 @njit(cache=True)
-def macro_density_score(
-    counts: np.ndarray,
-    new_cx: float,
-    new_cy: float,
-    hw: float,
-    hh: float,
-    bin_w: float,
-    bin_h: float,
-    rows: int,
-    cols: int,
-) -> float:
-    x0 = new_cx - hw
-    y0 = new_cy - hh
-    x1 = new_cx + hw
-    y1 = new_cy + hh
-    r0, r1, c0, c1 = _bin_range_for_rect(x0, y0, x1, y1, bin_w, bin_h, rows, cols)
-    s = 0
-    for r in range(r0, r1 + 1):
-        for c in range(c0, c1 + 1):
-            s += int(counts[r, c])
-    return float(s)
-
-
-@njit(cache=True)
 def grid_remove_macro(
     grid: np.ndarray,
     counts: np.ndarray,

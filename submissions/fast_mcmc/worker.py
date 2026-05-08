@@ -13,7 +13,6 @@ from fast_eval import (
     grid_insert_macro,
     grid_remove_macro,
     hpwl_for_net,
-    macro_density_score,
     total_hpwl,
 )
 from initialization import grasp_initialize
@@ -89,8 +88,6 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
     canvas = max(st.canvas_w, st.canvas_h)
     T0 = canvas * 0.12
     Tend = canvas * 0.0008
-    # SA acceptance uses HPWL plus a density proxy; weight decays slightly with T, never hits zero
-    density_w0 = float(canvas * 3e-4)
 
     start = time.time()
     best_pos = pos.copy()
@@ -125,7 +122,6 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         prop_total += 1
         frac = min(1.0, (now - start) / max(1e-9, cfg.time_limit_s))
         T = T0 * ((Tend / T0) ** frac)
-        density_weight = density_w0 * (0.62 + 0.38 * (T / T0))
 
         if debug:
             do_log = False
@@ -221,21 +217,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
             d2 = float(
                 delta_hpwl_for_macro_move(pos, st.net_ptr, st.net_macros, st.macro_net_ptr, st.macro_nets, j, j_nx, j_ny)
             )
-            d_hpwl = d1 + d2
-            s_m_new = float(
-                macro_density_score(counts, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
-            )
-            s_m_old = float(
-                macro_density_score(counts, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
-            )
-            s_j_new = float(
-                macro_density_score(counts, j_nx, j_ny, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
-            )
-            s_j_old = float(
-                macro_density_score(counts, j_oldx, j_oldy, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
-            )
-            delta_density = (s_m_new - s_m_old) + (s_j_new - s_j_old)
-            d = d_hpwl + density_weight * delta_density
+            d = d1 + d2
             accept = d <= 0.0 or rng.random() < math.exp(-d / max(1e-12, T))
             if not accept:
                 continue
@@ -251,7 +233,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
             grid_insert_macro(grid, counts, m, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
             grid_insert_macro(grid, counts, j, j_nx, j_ny, j_hw, j_hh, bin_w, bin_h, cfg.rows, cfg.cols)
 
-            cur_wl += d_hpwl
+            cur_wl += d
             if cur_wl < best_wl:
                 best_wl = float(cur_wl)
                 best_pos = pos.copy()
@@ -263,13 +245,9 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
             continue
 
         eval_total += 1
-        d_hpwl = float(
+        d = float(
             delta_hpwl_for_macro_move(pos, st.net_ptr, st.net_macros, st.macro_net_ptr, st.macro_nets, m, nx, ny)
         )
-        s_new = float(macro_density_score(counts, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols))
-        s_old = float(macro_density_score(counts, oldx, oldy, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols))
-        delta_density = s_new - s_old
-        d = d_hpwl + density_weight * delta_density
         accept = d <= 0.0 or rng.random() < math.exp(-d / max(1e-12, T))
         if not accept:
             continue
@@ -282,7 +260,7 @@ def run_worker(st: HardState, cfg: WorkerConfig) -> Dict[str, object]:
         pos[m, 0], pos[m, 1] = nx, ny
         grid_insert_macro(grid, counts, m, nx, ny, hw, hh, bin_w, bin_h, cfg.rows, cfg.cols)
 
-        cur_wl += d_hpwl
+        cur_wl += d
         if cur_wl < best_wl:
             best_wl = float(cur_wl)
             best_pos = pos.copy()
