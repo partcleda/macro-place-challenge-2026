@@ -232,7 +232,7 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
 | 1 | "vmallela" | **1.0109** | 0.7644 | 1.2921 | 0 | 15.5h total | :white_check_mark: | Verified 1.0109 (self-reported 1.1) |
-| 2 | "Cezar" | **1.037** | — | — | 0 | 55min/bench | | Resubmitted 5/3. Verification blocked on missing `steps/analytical.py` import. Previous variant verified 1.2224. |
+| 2 | "Cezar" | **1.1893** | 0.9041 | 1.4379 | 0 | 15.5h total | :white_check_mark: | Verified 1.1893 (self-reported 1.037). Resubmitted 5/3. Previous variant verified 1.2224. |
 | 3 | "KLA MACH" | **1.2121** | 0.8527 | 1.6532 | 0 | 2h15min total | :white_check_mark: | Verified 1.2121 (self-reported 1.2355). Consolidates UTDA / Chuanqi Chen / KLA MACH submissions (one algorithm per team). |
 | 4 | "Hoop Dreams" | **1.2207** | 0.8972 | 1.5072 | 0 | 5h total | :white_check_mark: | Verified 1.2207 (self-reported 1.2206). Built and ran from team-provided `Dockerfile`. |
 | 5 | "Shoom" | **1.2353** | — | — | 0 | 42min/bench | | Resubmitted 5/1 (was 1.3381). |
