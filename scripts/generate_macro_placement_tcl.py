@@ -9,6 +9,7 @@ Usage:
     python scripts/generate_macro_placement_tcl.py --benchmark ariane133
 """
 
+import os
 import re
 import sys
 import argparse
@@ -259,8 +260,19 @@ def write_orfs_macro_placement(placement, benchmark, plc, output_file, core_area
     # PDN metal5 needs ~10μm channels between macros.
     # NOTE: this modifies the submitted placement at Tier 2. A sidecar diff file
     # is written so teams can see exactly what the evaluator pushed and by how much.
-    if core_area is not None:
+    #
+    # MIN_GAP is configurable via the ORFS_MIN_GAP_UM env var. Default 12μm is
+    # the safe baseline. B2B / abutted-cluster placements may set this to 0
+    # (or any value <= 0) to disable the push entirely; in that case the
+    # placer is fully responsible for spacing and PDN routability.
+    try:
+        MIN_GAP = float(os.environ.get('ORFS_MIN_GAP_UM', '12.0'))
+    except ValueError:
         MIN_GAP = 12.0
+    if core_area is not None and MIN_GAP <= 0:
+        print(f"  ORFS_MIN_GAP_UM={MIN_GAP} — spacing push disabled, "
+              f"placer owns spacing and PDN routability")
+    if core_area is not None and MIN_GAP > 0:
         # Collect all placements into a flat list for gap enforcement.
         # Each entry: (kind, key1, key2, x, y, w, h, macro_name)
         _all = []
