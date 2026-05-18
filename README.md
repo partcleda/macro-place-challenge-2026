@@ -99,7 +99,7 @@ Evaluation is two-tiered:
 
 ### Tier 1: Proxy Cost Ranking (All Submissions)
 
-All submissions are ranked by **proxy cost** across the 18 IBM benchmarks. This is the primary qualifying metric. Proxy cost is computed using the TILOS MacroPlacement evaluator:
+All submissions are ranked by **proxy cost** across the 17 IBM benchmarks (ibm01–ibm04, ibm06–ibm18). This is the primary qualifying metric. Proxy cost is computed using the TILOS MacroPlacement evaluator:
 
 > **Proxy Cost = 1.0 × Wirelength + 0.5 × Density + 0.5 × Congestion**
 
