@@ -244,8 +244,8 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 | 11 | "Archgen" | **1.0948** | 0.7931 | 1.4345 | 0 | 15.25h total | :white_check_mark: | Verified 1.0948 (self-reported 1.16511 — 5.6% BETTER than self-reported). |
 | 12 | "Vibe" | **1.1443** | — | — | 0 | 13851s total | :white_check_mark: | Verified 1.1443 (self-reported 1.1477). |
 | 13 | "JonaU" | **1.1524** | — | — | 0 | 55min/bench | | New 5/13. (Jona Uhe) |
-| 14 | "ArzunPD" | **1.1883** | — | — | 0 | 55min/bench | | Resubmitted 5/8 (was 1.2478). |
-| 15 | "Talyxion" | **1.2075** | — | — | 0 | 7.2min/bench | | New 5/10. |
+| 14 | "Talyxion" | **1.1528** | 0.8664 | 1.4974 | 0 | 6.35h total | :white_check_mark: | Verified 1.1528 (current main self-reports 1.1531; form submission was 1.2075 — team iterated to v21 numgrad+CD/swap polish on v5 analytical base post-form-submit). |
+| 15 | "ArzunPD" | **1.1883** | — | — | 0 | 55min/bench | | Resubmitted 5/8 (was 1.2478). |
 | 16 | "Hoop Dreams" | **1.2207** | 0.8972 | 1.5072 | 0 | 5h total | :white_check_mark: | Verified 1.2207 (self-reported 1.2206). Built and ran from team-provided `Dockerfile`. |
 | 17 | "MakerCode" | **1.2282** | — | — | 0 | ~55min/bench | | Resubmitted 5/16 (v2). Was 1.26. (Wei Yet Ng) |
 | 18 | "KKPlace" | **1.2451** | — | — | 0 | 55min/bench | | New 5/13. (Kenneth Hou) |
