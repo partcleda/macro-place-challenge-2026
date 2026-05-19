@@ -58,6 +58,8 @@ Partcl develops GPU-accelerated systems for physical design that run orders of m
 - **Swag:** Every valid submission gets HRT swag!
 - **Note:** An additional score adjustment will be applied based on human-expert analysis of the resulting placement.
 
+For full Grand Prize scoring rules, feasibility gate, tie-breaking, and ORFS-failure handling, see [`SCORING.md`](SCORING.md).
+
 ## Submission Format
 
 - All submissions will be via google form. Submissions may be made public or private before the end of judging.
@@ -69,6 +71,7 @@ Partcl develops GPU-accelerated systems for physical design that run orders of m
 - All submissions must be registered via this [Submission Link](https://forms.gle/YDRtYV5Vq68SZgKW9).
 - All submissions must be under 1 hour end-to-end runtime (per benchmark) for the macro placement algorithm.
 - All submissions will be evaluated on a AMD EPYC 9655P with 16 cores + 100GB of memory and an NVIDIA RTX 6000 Ada 48GB.
+- Submissions may include a `Dockerfile` to define their own runtime environment. If present, the judges will build the image and run the eval against it (with `--network none` enforced at run time, so any `pip install` / `apt-get install` steps must happen at build time). Otherwise, the submission's `placer.py` is mounted into the judges' standard image (`pytorch/pytorch:2.5.1-cuda12.4-cudnn9-runtime`, Python 3.11).
 
 ## Additional Rules
 
@@ -78,6 +81,7 @@ Partcl develops GPU-accelerated systems for physical design that run orders of m
 - **Any framework**: PyTorch, TensorFlow, JAX, or pure Python/C++
 - **Any optimization technique**: Gradient descent, evolutionary algorithms, local search, etc.
 - **Training on public benchmarks**: You can learn from the IBM benchmark data
+- **Hard-macro orientation flips** (Klein-4 only: `N`, `FN`, `FS`, `S`) — carried to Tier 2 via an optional `orientations.pt` sidecar
 
 ### Not Allowed
 
@@ -86,6 +90,8 @@ Partcl develops GPU-accelerated systems for physical design that run orders of m
 - Using external/proprietary placement tools (must be open-source submission)
 - Exceeding runtime limits (1 hour per benchmark hard timeout)
 - Overlaps in resulting placement (strictly zero overlap between hard macros — no tolerance. Participants should add small gaps in their legalization to avoid float-precision edge cases.)
+- 90° rotations of hard macros (`R90`, `R270`, `FE`, `FW`) — the fakeram45 SRAMs in our benchmarks aren't designed for rotation (pin access and internal metal direction assume a fixed orientation)
+- Resizing soft macros — soft-macro size is a proxy-only concept for density/congestion that doesn't translate to Tier 2; sizes are locked to the initial `.plc` values on every `compute_proxy_cost` call
 
 ## Evaluation Details
 
@@ -93,7 +99,7 @@ Evaluation is two-tiered:
 
 ### Tier 1: Proxy Cost Ranking (All Submissions)
 
-All submissions are ranked by **proxy cost** across the 18 IBM benchmarks. This is the primary qualifying metric. Proxy cost is computed using the TILOS MacroPlacement evaluator:
+All submissions are ranked by **proxy cost** across the 17 IBM benchmarks (ibm01–ibm04, ibm06–ibm18). This is the primary qualifying metric. Proxy cost is computed using the TILOS MacroPlacement evaluator:
 
 > **Proxy Cost = 1.0 × Wirelength + 0.5 × Density + 0.5 × Congestion**
 
@@ -103,9 +109,10 @@ Baseline numbers are from: [An Updated Assessment of Reinforcement Learning for 
 
 The top 7 submissions by proxy score will be evaluated through the full **OpenROAD flow** on NG45 designs to measure real PnR outcomes: **WNS, TNS, and Area**.
 
-- The **Grand Prize ($20K)** is awarded based on best OpenROAD results among these top submissions.
-- To qualify, you must surpass the SA and RePlAce baselines for WNS, TNS, and Area.
+- The **Grand Prize ($20K)** is awarded to the highest-scoring submission using a **geometric mean of improvement ratios** across WNS, TNS, and Area vs. the average SA/RePlAce baseline.
+- To qualify, submissions must pass a **feasibility gate** — timing (WNS, TNS) cannot regress below both baselines on any design.
 - To avoid overfitting, we will also evaluate on 1-2 hidden NG45 designs.
+- **Full scoring rules: [`SCORING.md`](SCORING.md)**
 
 ## 🚀 Quick Start
 
@@ -224,37 +231,69 @@ Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (l
 
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
-| 1 | "Cezar" (ReFine) | **1.0666** | — | — | 0 | 5min/bench | | Updated 4/21; previous CRISP verified at 1.5781 |
-| 2 | "MTK" (DreamPlace++) | **1.2818** | 0.9073 | 1.6529 | 0 | 37s/bench (GPU) | :white_check_mark: | Verified better than self-reported 1.317; beats RePlAce on all 17 benchmarks |
-| 3 | "RoRa" (RipPlace) | **1.3241** | — | — | 0 | 694s/bench | | |
-| 4 | "Mike Gao" (autoresearch) | **1.3255** | — | — | 0 | 16min/bench | | |
-| 5 | "Electric Beatel" (ePlace-Lite) | **1.3913** | 0.9773 | 1.7253 | 0 | 155s/bench (GPU) | :white_check_mark: | |
-| 6 | "Varun's Parallel Worlds" (GRPlace) | **1.4017** | 1.0362 | 1.7298 | 0 | 27s/bench | :white_check_mark: | |
-| 7 | "BakaBobo" (Global Relocation Sweep) | **1.4044** | — | — | 0 | 282s/bench | | Updated from 1.4403 |
-| 8 | "UT Austin" - AS (DREAMPlace Analytical) | **1.4076** | — | — | 0 | 17s/bench | | |
-| 9 | "ByteDancer" (Incremental CD) | **1.4151** | 1.0236 | 1.7792 | 0 | 38min/bench | :white_check_mark: | |
-| 10 | "TAISPlAce" (ALNS + Thompson Sampling) | **1.4321** | — | — | 0 | 28min/bench | | |
-| 11 | "Pragnay" (SweepingBellPlacement) | **1.4427** | — | — | 0 | 632s/bench | | |
-| 12 | "Convex Optimization" (UWaterloo Student) | **1.4556** | 1.0432 | 1.7867 | 0 | 11s/bench | :white_check_mark: | Resubmitted 4/13; fixed from DQ (was 846 overlaps) |
-| 13 | "another Waterloo kid" (Batched Nesterov GP) | **1.4568** | — | — | 0 | 118s/bench | | |
+| 1 | "Carrotato" | **0.9671** | — | — | 0 | 3.8min/bench | | New 5/12. |
+| 2 | "Shoom" | **0.978** | — | — | 0 | 55min/bench | | Resubmitted 5/12. Previous variant verified 1.4901. |
+| 3 | "vmallela" | **1.0109** | 0.7644 | 1.2921 | 0 | 15.5h total | :white_check_mark: | Verified 1.0109 (self-reported 1.1). |
+| 4 | "DREAMPlaceProMaxUltra" | **1.0121** | 0.7955 | 1.2167 | 0 | 6h total | :white_check_mark: | Verified 1.0121 (self-reported 1.0467). Built and ran from team-provided `Dockerfile`. |
+| 5 | "QuantSC" | **1.0285** | — | — | 0 | 55min/bench | | New 5/16. (Vincent Xianrui Zhang, USC) |
+| 6 | "QED" | **1.031** | — | — | 0 | 30min/bench | | New 5/16. (Shubham Shukla) |
+| 7 | "Cezar" | **1.037** | — | — | 0 | 4h total | | Resubmitted 5/11. Previous variant verified 1.1893 (same self-report 1.037). Now ships team-provided `Dockerfile`. |
+| 8 | "Place, Route, Roll" | **1.0594** | — | — | 0 | ~17min/bench | | New 5/17. (Mike Gao & Amanda Yin, Cerebras) Team's prior submission was DQ'd for overlaps; resubmitted with 0 overlaps. |
+| 9 | "thinkorplace" | **1.0771** | — | — | 0 | 52min/bench | | New 5/13. (Brendan Murrell & Xiaofei Zhang) |
+| 10 | "KLA MACH" | **1.0817** | — | — | 0 | 30min/bench | | Resubmitted 5/16 (phase39, team "Chuanqi Chen"). Previous: phase38 (1.1335), phase36 verified 1.2121. Consolidates UTDA / Chuanqi Chen / KLA MACH submissions (one algo per team). |
+| 11 | "Archgen" | **1.0948** | 0.7931 | 1.4345 | 0 | 15.25h total | :white_check_mark: | Verified 1.0948 (self-reported 1.16511 — 5.6% BETTER than self-reported). |
+| 12 | "Vibe" | **1.1443** | — | — | 0 | 13851s total | :white_check_mark: | Verified 1.1443 (self-reported 1.1477). |
+| 13 | "JonaU" | **1.1524** | — | — | 0 | 55min/bench | | New 5/13. (Jona Uhe) |
+| 14 | "ArzunPD" | **1.1883** | — | — | 0 | 55min/bench | | Resubmitted 5/8 (was 1.2478). |
+| 15 | "Talyxion" | **1.2075** | — | — | 0 | 7.2min/bench | | New 5/10. |
+| 16 | "Hoop Dreams" | **1.2207** | 0.8972 | 1.5072 | 0 | 5h total | :white_check_mark: | Verified 1.2207 (self-reported 1.2206). Built and ran from team-provided `Dockerfile`. |
+| 17 | "MakerCode" | **1.2282** | — | — | 0 | ~55min/bench | | Resubmitted 5/16 (v2). Was 1.26. (Wei Yet Ng) |
+| 18 | "KKPlace" | **1.2451** | — | — | 0 | 55min/bench | | New 5/13. (Kenneth Hou) |
+| 19 | "Two-IIITK-Kids" | **1.2648** | — | — | 0 | ~34min/bench | | Resubmitted 5/15. Was 1.2868. (Amruth Ayaan Gulawani & Joel Dan Philip, IIIT Kottayam) |
+| 20 | "Adam_A" | **1.2655** | — | — | 0 | 682s/bench | | New 5/10. |
+| 21 | "The Basin Jumpers" | **1.2748** | — | — | 0 | 900s/bench | | Resubmitted 5/13 (William Zhang & Leon Do). Was "William Zhang" / "Convex Optimization", verified 1.4556. |
+| 22 | "RoRa" | **1.2788** | 0.9577 | 1.6222 | 0 | 2.6h total | :white_check_mark: | Verified 1.2788 (self-reported 1.2723). Resubmitted 5/1. |
+| 23 | "MTK" | **1.2818** | 0.9073 | 1.6529 | 0 | 37s/bench (GPU) | :white_check_mark: | Verified 1.2818 (self-reported 1.317). |
+| 24 | "Electric Beatle" | **1.3253** | — | — | 0 | 2000s/bench (GPU) | | Resubmitted 4/30 (was verified 1.3913). |
+| 25 | "UToronto Analytical" | **1.3323** | 0.9371 | 1.6545 | 0 | 24min total | :white_check_mark: | Verified 1.3323 (self-reported 1.3325). |
+| 26 | "V5" | **1.3382** | — | — | 0 | 850s/bench | | New 4/23. |
+| 27 | "jrslbenn" | **1.353** | — | — | 0 | 750s/bench | | New 5/4. |
+| 28 | "Barsat Khadka" | **1.38** | — | — | 0 | 1000-1800s/bench | | New 5/5. |
+| 29 | "Varun's Parallel Worlds" | **1.4017** | 1.0362 | 1.7298 | 0 | 27s/bench | :white_check_mark: | |
+| 30 | "UT Austin - AS" | **1.4076** | — | — | 0 | 17s/bench | | |
+| 31 | "ByteDancer" | **1.4151** | 1.0236 | 1.7792 | 0 | 38min/bench | :white_check_mark: | |
+| 32 | "TAISPlAce" | **1.4321** | — | — | 0 | 28min/bench | | |
+| 33 | "Pragnay" | **1.4427** | — | — | 0 | 632s/bench | | Blocked on `compute_proxy_cost(..., plc=None)` in fallback path. |
+| 34 | "No Man's Sky" | **1.4445** | — | — | 0 | 8.8min/bench | | New 5/4, resubmitted 5/6. |
+| 35 | "Aegir" | **1.4553** | — | — | 0 | 104s/bench | | New 5/9. |
+| 36 | "another Waterloo kid" | **1.4568** | — | — | 0 | 118s/bench | | Blocked on Modal cloud dispatch — can't run air-gapped. |
 | — | RePlAce (baseline) | **1.4578** | 0.9976 | 1.8370 | 0 | — | :white_check_mark: | |
-| 14 | "W3 Solutions" (GRACE) | **1.4824** | — | — | 0 | 90s/bench | | |
-| 15 | "Jiangban Ya" (Spectral-Seed + Adaptive Legalizer) | **1.4943** | 1.0891 | 1.8099 | 0 | 49s/bench | :white_check_mark: | |
-| 16 | "UTAUSTIN-CT" (PLC-Exact Congestion-Aware SA) | **1.5062** | 1.1363 | 1.7941 | 0 | 6s/bench | :white_check_mark: | |
-| 17 | "oracleX" (Oracle) | **1.5130** | 1.1340 | 1.7937 | 0 | 11s/bench | :white_check_mark: | |
-| 18 | "SEVmakers" (Hybrid Legalization + SA) | **1.5200** | — | — | 0 | 200s/bench | | |
-| 19 | "CA" (congestion_aware) | **1.5247** | 1.2226 | 1.7945 | 0 | 2s/bench | :white_check_mark: | Verified 1.5247 vs self-reported 1.5238 |
-| 20 | "#5 ubc cpen student" (Gene Pool Shuffle) | **1.5337** | 1.1411 | 1.8084 | 0 | 13s/bench | :white_check_mark: | |
-| 21 | Will Seed (Partcl) | **1.5338** | 1.1625 | 1.7965 | 0 | 35s total | :white_check_mark: | |
-| 22 | "UT Austin" - RH (DREAMPlace) | **1.6037** | — | — | 0 | 4.5s/bench | | |
-| 23 | "UT Austin" - CT (PROXYCost) | **1.8706** | — | — | 0 | 187s/bench | | |
-| 24 | "AS" (Shelf Stacker) | **1.9121** | 1.4614 | 2.3508 | 0 | 0.16s total | :white_check_mark: | |
-| 25 | "Adi's Team" (GNN-ePlace Hybrid) | **2.0025** | — | — | 0 | 3726s/bench | | |
-| 26 | "Sharc #1" (Auction Placer) | **2.0433** | 1.5143 | 2.4336 | 0 | 96s/bench | :white_check_mark: | |
+| 37 | "W3 Solutions" | **1.4824** | — | — | 0 | 90s/bench | | Runtime exceeds 1h/bench cap. |
+| 38 | "Captain.Rhinoceros" | **1.4906** | — | — | 0 | <26.6min/bench | | New 5/13. (John Saleeby) |
+| 39 | "Jiangban Ya" | **1.4943** | 1.0891 | 1.8099 | 0 | 49s/bench | :white_check_mark: | |
+| 40 | "UTAUSTIN-CT" | **1.5062** | 1.1363 | 1.7941 | 0 | 6s/bench | :white_check_mark: | |
+| 41 | "oracleX" | **1.5130** | 1.1340 | 1.7937 | 0 | 11s/bench | :white_check_mark: | |
+| 42 | "SEVmakers" | **1.5200** | — | — | 0 | 200s/bench | | Private repo — pending judge access. |
+| 43 | "CA" | **1.5247** | 1.2226 | 1.7945 | 0 | 2s/bench | :white_check_mark: | Verified 1.5247 (self-reported 1.5238). |
+| 44 | "ZeroLatency" | **1.5286** | — | — | 0 | 17s total | | New 5/9. |
+| 45 | "#5 ubc cpen student" | **1.5337** | 1.1411 | 1.8084 | 0 | 13s/bench | :white_check_mark: | |
+| 46 | Will Seed (Partcl) | **1.5338** | 1.1625 | 1.7965 | 0 | 35s total | :white_check_mark: | |
+| 47 | "6ummy" | **1.5361** | — | — | 0 | 221s/bench | | New 5/17. (Jungwoo Shin) |
+| 48 | "RUDY Can't Fail" | **1.5397** | 1.1927 | 1.8881 | 0 | 6min total | :white_check_mark: | Verified 1.5397 (self-reported 1.3605). |
+| 49 | "UT Austin - RH" | **1.6037** | — | — | 0 | 4.5s/bench | | |
+| 50 | "Mr_Chonk" | **1.7031** | — | — | 0 | ~23min/bench | | New 5/16. (Kush Voorakkara) |
+| 51 | "Binghamton" | **1.7621** | — | — | 0 | 2min/bench | | New 5/10. Team also reports 1.5375 from an alternate non-legalized run. |
+| 52 | "UT Austin - CT" | **1.8706** | — | — | 0 | 187s/bench | | |
+| 53 | "rpocevi" | **1.8894** | — | — | 0 | 22.5s/bench | | New 5/9. |
+| 54 | "AS" | **1.9121** | 1.4614 | 2.3508 | 0 | 0.16s total | :white_check_mark: | |
+| 55 | "Adi's Team" | **2.0025** | — | — | 0 | 3726s/bench | | Blocked on `compute_proxy_cost(skip_congestion=True)` kwarg. |
+| 56 | "Sharc #1" | **2.0433** | 1.5143 | 2.4336 | 0 | 96s/bench | :white_check_mark: | |
 | — | SA (baseline) | 2.1251 | 1.3166 | 3.6726 | 0 | — | :white_check_mark: | |
+| 57 | "Satisficing" | **2.2109** | — | — | 0 | <1s/bench | | New 5/17. (Noah Cencini) |
 | — | Greedy Row (demo) | 2.2109 | 1.6728 | 2.7696 | 0 | 0.3s total | :white_check_mark: | |
-| — | "Binghamton" (feng shui) | pending | — | — | — | — | | |
-| — | "MacroBio" (Two-Opt Swap) | pending | — | — | — | — | | |
+| — | "MacroBio" | pending | — | — | — | — | | |
+| DQ | "Mike Gao" | self-reported 1.3255 | — | — | 1939 | 16min/bench | | 1939 overlaps (old submission). Resubmitted 5/17 as "Place, Route, Roll" (rank 8). |
+| DQ | "BakaBobo" | self-reported 1.4044 | — | — | — | 282s/bench | | Missing import — code won't run. |
 
 *Submit your results via the [Submission Link](https://forms.gle/YDRtYV5Vq68SZgKW9)!*
 

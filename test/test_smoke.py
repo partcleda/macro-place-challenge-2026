@@ -61,6 +61,55 @@ def test_validate_placement(ibm01):
     assert isinstance(violations, list)
 
 
+def test_net_pin_nodes(ibm01):
+    """Loader exposes pin-level net connectivity consistent with net_nodes."""
+    import torch
+
+    benchmark, _ = ibm01
+    assert len(benchmark.net_pin_nodes) == benchmark.num_nets
+
+    for net_id, (net_pins, net_owners) in enumerate(
+        zip(benchmark.net_pin_nodes, benchmark.net_nodes)
+    ):
+        # Shape: [pins_in_net, 2] — columns are (owner_idx, pin_slot)
+        assert net_pins.ndim == 2 and net_pins.shape[1] == 2, (
+            f"net {net_id}: net_pins shape {net_pins.shape}"
+        )
+
+        # Dedup+sort of owner column must match existing net_nodes exactly
+        owners_sorted = torch.unique(net_pins[:, 0]).sort().values
+        assert torch.equal(owners_sorted, net_owners), (
+            f"net {net_id}: owners {owners_sorted.tolist()} != net_nodes {net_owners.tolist()}"
+        )
+
+        # Pin slots must index into macro_pin_offsets[owner] for hard macros
+        for owner, slot in net_pins.tolist():
+            if owner < benchmark.num_hard_macros:
+                num_pins_on_macro = benchmark.macro_pin_offsets[owner].shape[0]
+                assert slot < num_pins_on_macro, (
+                    f"net {net_id}: owner {owner} slot {slot} >= "
+                    f"macro_pin_offsets[{owner}].shape[0] {num_pins_on_macro}"
+                )
+            else:
+                assert slot == 0, (
+                    f"net {net_id}: non-hard-macro owner {owner} must use slot 0, got {slot}"
+                )
+
+
+def test_benchmark_save_load_roundtrip(ibm01, tmp_path):
+    """Benchmark.save/load preserves net_pin_nodes."""
+    import torch
+
+    benchmark, _ = ibm01
+    out = tmp_path / "roundtrip.pt"
+    benchmark.save(str(out))
+    loaded = Benchmark.load(str(out))
+
+    assert len(loaded.net_pin_nodes) == len(benchmark.net_pin_nodes)
+    for a, b in zip(loaded.net_pin_nodes, benchmark.net_pin_nodes):
+        assert torch.equal(a, b)
+
+
 def test_greedy_row_placer(ibm01):
     """Greedy row placer produces a valid, zero-overlap placement."""
     import importlib.util

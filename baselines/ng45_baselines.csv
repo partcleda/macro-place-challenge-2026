@@ -1,0 +1,8 @@
+design,method,core_area_um2,std_cell_area_um2,macro_area_um2,power_mw,wirelength_um,ws_ns,tns_ns,source
+ariane133,SA (flow-1),2560080,214818,1018356,296.83,3598577,0.189,0.000,TILOS paper (Innovus postRoute)
+ariane133,RePlAce (flow-2),2560080,215579,1018356,297.86,3456139,0.219,0.000,TILOS paper (Innovus postRoute)
+ariane136,RePlAce (flow-2),2889201,214793,1041326,300.65,3432693,0.324,0.000,TILOS paper (Innovus postRoute)
+mempool_tile,SA (flow-1),774462,266046,187191,148.62,3659098,0.000,0.000,TILOS paper (Innovus postRoute)
+mempool_tile,RePlAce (flow-2),774462,267433,187191,137.36,3469347,0.000,0.000,TILOS paper (Innovus postRoute)
+nvdla,SA (flow-1),5443285,400073,2325683,2360.43,8660700,0.273,0.000,TILOS paper (Innovus postRoute)
+nvdla,RePlAce (flow-2),5443285,392565,2325683,2330.26,8392045,0.252,0.000,TILOS paper (Innovus postRoute)

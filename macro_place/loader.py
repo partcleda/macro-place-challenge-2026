@@ -89,16 +89,20 @@ def load_benchmark(
 
     num_macros = num_hard + num_soft
 
-    # Extract hard macro pin offsets (relative to macro center)
+    # Extract hard macro pin offsets (relative to macro center).
+    # Also build pin_slot: full pin name ("MACRO/PIN") -> (macro_name, slot_in_macro)
+    # so we can map net membership to specific pin offsets (needed for pin-level HPWL).
     macro_pin_offsets = []
-    pin_map = {}
+    pin_map = {}          # macro_name -> list of [x_offset, y_offset]
+    pin_slot = {}         # "MACRO/PIN" -> (macro_name, slot index into pin_map[macro_name])
     for idx in plc.hard_macro_pin_indices:
         pin = plc.modules_w_pins[idx]
         pin_macro = pin.get_macro_name() if hasattr(pin, "get_macro_name") else None
         if pin_macro:
-            pin_map.setdefault(pin_macro, []).append(
-                [pin.x_offset, pin.y_offset]
-            )
+            slot = len(pin_map.setdefault(pin_macro, []))
+            pin_map[pin_macro].append([pin.x_offset, pin.y_offset])
+            if hasattr(pin, "get_name"):
+                pin_slot[pin.get_name()] = (pin_macro, slot)
     for macro_idx in hard_macro_plc_indices:
         macro_name = plc.modules_w_pins[macro_idx].get_name()
         offsets = pin_map.get(macro_name, [])
@@ -143,16 +147,30 @@ def load_benchmark(
 
     num_nets = int(plc.net_cnt)
     net_nodes = []
+    net_pin_nodes = []
     net_weights_list = []
     for driver, sinks in plc.nets.items():
+        pins_in_net = []  # list of [owner_bench_idx, pin_slot]
         nodes_in_net = set()
         for pin_name in [driver] + sinks:
-            # Pin names are "MACRO/PIN" for macro pins or just "PORT" for ports
-            parent = pin_name.split("/")[0]
-            if parent in name_to_bench:
-                nodes_in_net.add(name_to_bench[parent])
+            # Pin names are "MACRO/PIN" for macro pins or just "PORT" for ports.
+            # For hard-macro pins we resolve to the exact offset slot; for soft
+            # macros and ports (which carry no per-pin offsets here) we use slot 0.
+            if pin_name in pin_slot:
+                macro_name, slot = pin_slot[pin_name]
+                if macro_name in name_to_bench:
+                    owner = name_to_bench[macro_name]
+                    pins_in_net.append([owner, slot])
+                    nodes_in_net.add(owner)
+            else:
+                parent = pin_name.split("/")[0]
+                if parent in name_to_bench:
+                    owner = name_to_bench[parent]
+                    pins_in_net.append([owner, 0])
+                    nodes_in_net.add(owner)
         if nodes_in_net:
             net_nodes.append(torch.tensor(sorted(nodes_in_net), dtype=torch.long))
+            net_pin_nodes.append(torch.tensor(pins_in_net, dtype=torch.long))
             net_weights_list.append(1.0)
 
     num_nets = len(net_nodes)
@@ -179,6 +197,7 @@ def load_benchmark(
         vroutes_per_micron=vroutes_per_micron,
         port_positions=port_positions,
         macro_pin_offsets=macro_pin_offsets,
+        net_pin_nodes=net_pin_nodes,
         hard_macro_indices=hard_macro_plc_indices,
         soft_macro_indices=soft_macro_plc_indices,
     )
