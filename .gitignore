@@ -51,10 +51,12 @@ results/
 *.pth
 *.ckpt
 
-# Exception: Allow processed public benchmarks (so users can clone and use immediately)
+# Exception: Allow processed benchmarks (public + hidden)
 !benchmarks/processed/
 !benchmarks/processed/public/
 !benchmarks/processed/public/*.pt
+!benchmarks/processed/hidden/
+!benchmarks/processed/hidden/*.pt
 
 # Logs
 *.log
