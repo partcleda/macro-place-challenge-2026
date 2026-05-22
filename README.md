@@ -65,7 +65,7 @@ For full Grand Prize scoring rules, feasibility gate, tie-breaking, and ORFS-fai
 - All submissions will be via google form. Submissions may be made public or private before the end of judging.
 - Private submissions will be required to share repository with judges so they may clone/evaluate the method.
 - Teams may be up to 5 individuals.
-- The deadline for submissions is May 21, 2026, 11:59 pacific.
+- The submission deadline was May 21, 2026, 11:59 pacific. **Submissions are now closed.**
 - All teams may only submit one algorithm.
 - **All winning implementations must be made open-source under Apache 2.0 or GPL**
 - All submissions must be registered via this [Submission Link](https://forms.gle/YDRtYV5Vq68SZgKW9).
@@ -227,7 +227,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 
 ## 🏅 Leaderboard
 
-Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (lower is better). Zero overlaps required on all benchmarks. Scores are unverified until confirmed by judges.
+**The competition is now closed.** The leaderboard will be updated on a rolling basis as submissions are verified. Submissions are ranked by **average proxy cost** across all 17 IBM benchmarks (lower is better). Zero overlaps required on all benchmarks. Scores are unverified until confirmed by judges.
 
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
