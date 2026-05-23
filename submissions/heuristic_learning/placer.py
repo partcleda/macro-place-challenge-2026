@@ -140,6 +140,8 @@ class HeuristicLearningPlacer:
     def _soft_strength(self, features, n_hard, num_soft_macros):
         if num_soft_macros == 0:
             return None
+        if features["utilization"] < 0.12 and features["degree_cv"] <= 1.2:
+            return 0.25
         if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
             return 0.45
         if (
