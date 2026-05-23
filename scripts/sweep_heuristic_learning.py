@@ -189,6 +189,7 @@ def _candidate_rows(mod, placer, benchmark, plc):
             steps=1,
         )
         costs = compute_proxy_cost(soft_full, benchmark, plc)
+        full_by_label["soft_hotspot_mild"] = soft_full
         rows.append(
             {
                 "benchmark": benchmark.name,
@@ -211,6 +212,44 @@ def _candidate_rows(mod, placer, benchmark, plc):
                 "features": features,
             }
         )
+
+    runtime_rows = [row for row in rows if row["selected_by_budget"] and row["valid"]]
+    if runtime_rows:
+        best_runtime = min(runtime_rows, key=lambda row: row["proxy_cost"])
+        if placer._enable_official_hard_search(
+            features, n_hard, best_runtime["proxy_cost"]
+        ):
+            score_start = time.time()
+            local_full, local_score = placer._official_hard_local_search(
+                full_by_label[best_runtime["label"]],
+                benchmark,
+                plc,
+                best_runtime["proxy_cost"],
+                features,
+                time.time(),
+            )
+            costs = compute_proxy_cost(local_full, benchmark, plc)
+            rows.append(
+                {
+                    "benchmark": benchmark.name,
+                    "label": "official_hard_local_search",
+                    "selected_by_budget": True,
+                    "valid": costs["overlap_count"] == 0,
+                    "proxy_cost": float(costs["proxy_cost"]),
+                    "wirelength_cost": float(costs["wirelength_cost"]),
+                    "density_cost": float(costs["density_cost"]),
+                    "congestion_cost": float(costs["congestion_cost"]),
+                    "overlap_count": int(costs["overlap_count"]),
+                    "approx_cost": None,
+                    "score_sec": time.time() - score_start,
+                    "recipe": {
+                        "recipe": "official_hard_local_search",
+                        "source": best_runtime["label"],
+                        "proxy_from_method": float(local_score),
+                    },
+                    "features": features,
+                }
+            )
     return rows
 
 

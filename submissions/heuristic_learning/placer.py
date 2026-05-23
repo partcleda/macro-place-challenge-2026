@@ -8,6 +8,7 @@ available, and the best zero-overlap placement is returned.
 """
 
 import contextlib
+import heapq
 import io
 import math
 import os
@@ -156,6 +157,133 @@ class HeuristicLearningPlacer:
             return 0.35
         return None
 
+    def _enable_official_hard_search(self, features, n_hard, best_score):
+        return (
+            n_hard <= 320
+            and best_score >= 1.45
+            and features["degree_cv"] <= 4.2
+        )
+
+    def _official_hard_local_search(self, full, benchmark, plc, best_score, features, start_time):
+        from macro_place.objective import compute_proxy_cost
+
+        n_hard = benchmark.num_hard_macros
+        sizes = benchmark.macro_sizes[:n_hard].cpu().numpy().astype(np.float64)
+        fixed = benchmark.macro_fixed[:n_hard].cpu().numpy().astype(bool)
+        cw = float(benchmark.canvas_width)
+        ch = float(benchmark.canvas_height)
+        rows = int(benchmark.grid_rows)
+        cols = int(benchmark.grid_cols)
+        cell_w = cw / max(cols, 1)
+        cell_h = ch / max(rows, 1)
+        half_w = sizes[:, 0] / 2.0
+        half_h = sizes[:, 1] / 2.0
+        rounds = 5 if features["utilization"] >= 0.52 and features["degree_cv"] <= 1.0 else 3
+        scores_per_round = 12
+
+        def legal_single(pos, idx):
+            x, y = pos[idx]
+            if x - half_w[idx] < -1e-6 or x + half_w[idx] > cw + 1e-6:
+                return False
+            if y - half_h[idx] < -1e-6 or y + half_h[idx] > ch + 1e-6:
+                return False
+            dx = np.abs(x - pos[:, 0])
+            dy = np.abs(y - pos[:, 1])
+            sep_x = (sizes[idx, 0] + sizes[:, 0]) / 2.0 + 0.035
+            sep_y = (sizes[idx, 1] + sizes[:, 1]) / 2.0 + 0.035
+            overlaps = (dx < sep_x) & (dy < sep_y)
+            overlaps[idx] = False
+            return not bool(overlaps.any())
+
+        def candidate_heap(cur_full):
+            pos = cur_full[:n_hard].cpu().numpy().astype(np.float64)
+            _quiet_call(compute_proxy_cost, cur_full, benchmark, plc)
+            density = np.asarray(getattr(plc, "grid_cells", [0.0] * (rows * cols)), dtype=np.float64)
+            h_cong = np.asarray(getattr(plc, "H_routing_cong", [0.0] * (rows * cols)), dtype=np.float64)
+            v_cong = np.asarray(getattr(plc, "V_routing_cong", [0.0] * (rows * cols)), dtype=np.float64)
+            if density.size != rows * cols or h_cong.size != rows * cols or v_cong.size != rows * cols:
+                return []
+            density = density.reshape(rows, cols)
+            cong = np.maximum(h_cong.reshape(rows, cols), v_cong.reshape(rows, cols))
+            hot = density + 0.55 * cong
+            hot = hot / max(float(np.percentile(hot, 95)), 1e-9)
+
+            macro_hot = []
+            for idx in range(n_hard):
+                if fixed[idx]:
+                    continue
+                col = int(np.clip(pos[idx, 0] / cell_w, 0, cols - 1))
+                row = int(np.clip(pos[idx, 1] / cell_h, 0, rows - 1))
+                macro_hot.append((hot[row, col], idx, row, col))
+
+            heap = []
+            seen = set()
+            directions = [
+                (-1, 0),
+                (1, 0),
+                (0, -1),
+                (0, 1),
+                (-1, -1),
+                (-1, 1),
+                (1, -1),
+                (1, 1),
+            ]
+            for local_hot, idx, row, col in sorted(macro_hot, reverse=True)[:18]:
+                for radius in (2, 3, 4, 5):
+                    for dr, dc in directions:
+                        new_row = int(np.clip(row + dr * radius, 0, rows - 1))
+                        new_col = int(np.clip(col + dc * radius, 0, cols - 1))
+                        target_hot = hot[new_row, new_col]
+                        if target_hot >= local_hot * 0.94:
+                            continue
+                        tx = np.clip((new_col + 0.5) * cell_w, half_w[idx], cw - half_w[idx])
+                        ty = np.clip((new_row + 0.5) * cell_h, half_h[idx], ch - half_h[idx])
+                        key = (idx, round(float(tx), 3), round(float(ty), 3))
+                        if key in seen:
+                            continue
+                        seen.add(key)
+                        test_pos = pos.copy()
+                        test_pos[idx] = [tx, ty]
+                        if not legal_single(test_pos, idx):
+                            continue
+                        displacement = float(np.linalg.norm(test_pos[idx] - pos[idx]) / max(cw, ch))
+                        merit = (local_hot - target_hot) - 0.12 * displacement
+                        heapq.heappush(heap, (-merit, idx, float(tx), float(ty)))
+            return heap
+
+        cur = full.clone()
+        cur_score = best_score
+        for round_idx in range(rounds):
+            if time.time() - start_time > self.max_seconds * 0.82:
+                break
+            heap = candidate_heap(cur)
+            round_best = cur_score
+            round_full = None
+            scored = 0
+            while heap and scored < scores_per_round:
+                if time.time() - start_time > self.max_seconds * 0.88:
+                    break
+                _, idx, tx, ty = heapq.heappop(heap)
+                candidate = cur.clone()
+                candidate[idx, 0] = tx
+                candidate[idx, 1] = ty
+                costs = _quiet_call(compute_proxy_cost, candidate, benchmark, plc)
+                scored += 1
+                score = float(costs["proxy_cost"]) if costs["overlap_count"] == 0 else float("inf")
+                if score < round_best:
+                    round_best = score
+                    round_full = candidate
+            if round_full is None:
+                break
+            cur = round_full
+            cur_score = round_best
+            if self.debug:
+                print(
+                    f"[HL_DEBUG] official_hard_local_search_r{round_idx + 1}: {cur_score:.6f}",
+                    flush=True,
+                )
+        return cur, cur_score
+
     def place(self, benchmark: Benchmark) -> torch.Tensor:
         start_time = time.time()
         random.seed(self.seed)
@@ -271,6 +399,14 @@ class HeuristicLearningPlacer:
                 if score < best_score:
                     best_score = score
                     best_full = soft_full
+        if (
+            math.isfinite(best_score)
+            and plc is not None
+            and self._enable_official_hard_search(features, n_hard, best_score)
+        ):
+            best_full, best_score = self._official_hard_local_search(
+                best_full, benchmark, plc, best_score, features, start_time
+            )
         return best_full
 
     def _soft_hotspot_relief(self, full, benchmark, plc, strength, steps):
