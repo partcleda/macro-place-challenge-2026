@@ -179,7 +179,12 @@ class HeuristicLearningPlacer:
         cell_h = ch / max(rows, 1)
         half_w = sizes[:, 0] / 2.0
         half_h = sizes[:, 1] / 2.0
-        rounds = 10 if features["utilization"] >= 0.52 and features["degree_cv"] <= 1.0 else 3
+        if features["utilization"] >= 0.52 and features["degree_cv"] <= 1.0:
+            rounds = 10
+        elif features["utilization"] >= 0.43 and features["degree_cv"] >= 2.0:
+            rounds = 6
+        else:
+            rounds = 3
         scores_per_round = 12
 
         def legal_single(pos, idx):
