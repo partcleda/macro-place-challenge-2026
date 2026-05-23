@@ -160,7 +160,7 @@ class HeuristicLearningPlacer:
     def _enable_official_hard_search(self, features, n_hard, best_score):
         return (
             n_hard <= 320
-            and best_score >= 1.45
+            and best_score >= 1.35
             and features["utilization"] >= 0.30
             and features["degree_cv"] <= 5.0
         )
