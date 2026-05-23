@@ -208,7 +208,7 @@ class HeuristicLearningPlacer:
             and 3.8 <= features["size_cv"] <= 4.8
             and features["degree_cv"] <= 0.7
         ):
-            return 0.35
+            return 0.18
         if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
             return 0.45
         if (
@@ -249,6 +249,13 @@ class HeuristicLearningPlacer:
             and features["degree_cv"] <= 0.8
         ):
             return 2
+        if (
+            360 <= n_hard <= 390
+            and 0.35 <= features["utilization"] <= 0.40
+            and 3.8 <= features["size_cv"] <= 4.8
+            and features["degree_cv"] <= 0.7
+        ):
+            return 3
         return 1
 
     def _enable_official_hard_search(self, features, n_hard, best_score):
