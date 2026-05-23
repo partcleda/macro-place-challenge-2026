@@ -153,6 +153,13 @@ class HeuristicLearningPlacer:
                 and 2.0 <= features["degree_cv"] <= 4.2
             ):
                 specs.append(("hotspot_relief_skew_dense", base, 1.50, 2))
+        elif (
+            440 <= n_hard <= 490
+            and 0.35 <= features["utilization"] <= 0.42
+            and features["size_cv"] <= 3.4
+            and features["degree_cv"] <= 0.8
+        ):
+            specs.append(("hotspot_relief_medium_sparse", base, 0.50, 1))
         elif features["utilization"] < 0.35:
             specs.append(("hotspot_relief_mild", base, 0.45, 1))
         return specs
