@@ -119,6 +119,13 @@ class HeuristicLearningPlacer:
 
     def _hard_hotspot_specs(self, features, n_hard, base):
         specs = []
+        if (
+            360 <= n_hard < 430
+            and features["utilization"] < 0.32
+            and features["size_cv"] >= 7.0
+            and features["degree_cv"] <= 0.8
+        ):
+            return specs
         if n_hard <= 430:
             specs.extend(
                 [
@@ -148,6 +155,13 @@ class HeuristicLearningPlacer:
             and features["degree_cv"] <= 0.8
         ):
             return 0.25
+        if (
+            360 <= n_hard < 430
+            and features["utilization"] < 0.32
+            and features["size_cv"] >= 7.0
+            and features["degree_cv"] <= 0.8
+        ):
+            return 0.35
         if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
             return 0.45
         if (
@@ -624,6 +638,13 @@ class HeuristicLearningPlacer:
         if (
             features["n_hard"] >= 700
             and features["utilization"] < 0.20
+            and features["degree_cv"] <= 0.8
+        ):
+            return []
+        if (
+            360 <= features["n_hard"] < 430
+            and features["utilization"] < 0.32
+            and features["size_cv"] >= 7.0
             and features["degree_cv"] <= 0.8
         ):
             return []
