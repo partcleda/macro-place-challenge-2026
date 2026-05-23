@@ -66,16 +66,10 @@ def _candidate_rows(mod, placer, benchmark, plc):
         base = safe_base
     candidates.append(("legalized_initial", base, {"seed": "initial", "recipe": "base"}))
     candidates.append(("will_seed_legalized", safe_base, {"seed": "initial", "recipe": "safe"}))
-    hotspot_specs = []
-    if n_hard <= 430:
-        hotspot_specs.extend(
-            [
-                ("hotspot_relief_mild", "base", base, 0.55, 1),
-                ("hotspot_relief_strong", "base", base, 0.95, 2),
-            ]
-        )
-    elif features["utilization"] < 0.35:
-        hotspot_specs.append(("hotspot_relief_mild", "base", base, 0.45, 1))
+    hotspot_specs = [
+        (label, "base", source, strength, steps)
+        for label, source, strength, steps in placer._hard_hotspot_specs(features, n_hard, base)
+    ]
 
     for label, source_name, source, strength, steps in hotspot_specs:
         start = time.time()
@@ -141,6 +135,7 @@ def _candidate_rows(mod, placer, benchmark, plc):
     )
     limited_labels = {label for label, _, _ in limit_candidates}
 
+    full_by_label = {}
     for label, pos, meta in candidates:
         score_start = time.time()
         candidate_pos = pos
@@ -150,6 +145,7 @@ def _candidate_rows(mod, placer, benchmark, plc):
         full[:n_hard] = torch.tensor(candidate_pos, dtype=torch.float32)
         costs = compute_proxy_cost(full, benchmark, plc)
         valid = costs["overlap_count"] == 0
+        full_by_label[label] = full
         approx = None
         if len(edges) > 0:
             approx = placer._approx_cost(
@@ -176,6 +172,42 @@ def _candidate_rows(mod, placer, benchmark, plc):
                 "approx_cost": None if approx is None else float(approx),
                 "score_sec": time.time() - score_start,
                 "recipe": meta,
+                "features": features,
+            }
+        )
+
+    soft_strength = placer._soft_strength(features, n_hard, benchmark.num_soft_macros)
+    runtime_rows = [row for row in rows if row["selected_by_budget"] and row["valid"]]
+    if soft_strength is not None and runtime_rows:
+        best_hard = min(runtime_rows, key=lambda row: row["proxy_cost"])
+        score_start = time.time()
+        soft_full = placer._soft_hotspot_relief(
+            full_by_label[best_hard["label"]],
+            benchmark,
+            plc,
+            strength=soft_strength,
+            steps=1,
+        )
+        costs = compute_proxy_cost(soft_full, benchmark, plc)
+        rows.append(
+            {
+                "benchmark": benchmark.name,
+                "label": "soft_hotspot_mild",
+                "selected_by_budget": True,
+                "valid": costs["overlap_count"] == 0,
+                "proxy_cost": float(costs["proxy_cost"]),
+                "wirelength_cost": float(costs["wirelength_cost"]),
+                "density_cost": float(costs["density_cost"]),
+                "congestion_cost": float(costs["congestion_cost"]),
+                "overlap_count": int(costs["overlap_count"]),
+                "approx_cost": None,
+                "score_sec": time.time() - score_start,
+                "recipe": {
+                    "recipe": "soft_hotspot_mild",
+                    "source": best_hard["label"],
+                    "strength": soft_strength,
+                    "steps": 1,
+                },
                 "features": features,
             }
         )

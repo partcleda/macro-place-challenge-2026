@@ -116,6 +116,46 @@ class HeuristicLearningPlacer:
         self.max_seconds = 55.0 * 60.0
         self.debug = bool(os.environ.get("HL_DEBUG"))
 
+    def _hard_hotspot_specs(self, features, n_hard, base):
+        specs = []
+        if n_hard <= 430:
+            specs.extend(
+                [
+                    ("hotspot_relief_mild", base, 0.55, 1),
+                    ("hotspot_relief_strong", base, 0.95, 2),
+                ]
+            )
+            if features["utilization"] >= 0.52 and features["degree_cv"] <= 1.0:
+                specs.append(("hotspot_relief_dense_medium", base, 0.55, 2))
+            elif (
+                0.43 <= features["utilization"] <= 0.50
+                and 2.0 <= features["degree_cv"] <= 4.2
+            ):
+                specs.append(("hotspot_relief_skew_dense", base, 1.50, 2))
+        elif features["utilization"] < 0.35:
+            specs.append(("hotspot_relief_mild", base, 0.45, 1))
+        return specs
+
+    def _soft_strength(self, features, n_hard, num_soft_macros):
+        if num_soft_macros == 0:
+            return None
+        if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
+            return 0.45
+        if (
+            n_hard < 360
+            and features["utilization"] >= 0.54
+            and features["degree_cv"] <= 1.0
+        ):
+            return 0.20
+        if (
+            n_hard < 360
+            and features["utilization"] <= 0.43
+            and 1.2 < features["degree_cv"] <= 3.5
+            and features["size_cv"] <= 4.2
+        ):
+            return 0.35
+        return None
+
     def place(self, benchmark: Benchmark) -> torch.Tensor:
         start_time = time.time()
         random.seed(self.seed)
@@ -152,18 +192,9 @@ class HeuristicLearningPlacer:
         candidates.append(("legalized_initial", base))
         candidates.append(("will_seed_legalized", safe_base))
         if plc is not None:
-            hotspot_specs = []
-            if n_hard <= 430:
-                hotspot_specs.extend(
-                    [
-                        ("hotspot_relief_mild", base, 0.55, 1),
-                        ("hotspot_relief_strong", base, 0.95, 2),
-                    ]
-                )
-            elif features["utilization"] < 0.35:
-                hotspot_specs.append(("hotspot_relief_mild", base, 0.45, 1))
-
-            for label, source, strength, steps in hotspot_specs:
+            for label, source, strength, steps in self._hard_hotspot_specs(
+                features, n_hard, base
+            ):
                 relief = self._hotspot_relief(
                     source,
                     benchmark,
@@ -225,20 +256,21 @@ class HeuristicLearningPlacer:
             safe = self._will_seed_legalize(initial, movable, sizes, cw, ch)
             best_full = benchmark.macro_positions.clone()
             best_full[:n_hard] = torch.tensor(safe, dtype=torch.float32)
-        elif (
-            plc is not None
-            and benchmark.num_soft_macros > 0
-            and features["utilization"] <= 0.54
-            and features["degree_cv"] <= 1.2
-        ):
-            label = "soft_hotspot_mild"
-            soft_full = self._soft_hotspot_relief(best_full, benchmark, plc, strength=0.45, steps=1)
-            score = self._score(soft_full, benchmark, plc)
-            if self.debug:
-                print(f"[HL_DEBUG] {label}: {score:.6f}", flush=True)
-            if score < best_score:
-                best_score = score
-                best_full = soft_full
+        else:
+            soft_strength = None if plc is None else self._soft_strength(
+                features, n_hard, benchmark.num_soft_macros
+            )
+            if soft_strength is not None:
+                label = "soft_hotspot_mild"
+                soft_full = self._soft_hotspot_relief(
+                    best_full, benchmark, plc, strength=soft_strength, steps=1
+                )
+                score = self._score(soft_full, benchmark, plc)
+                if self.debug:
+                    print(f"[HL_DEBUG] {label}: {score:.6f}", flush=True)
+                if score < best_score:
+                    best_score = score
+                    best_full = soft_full
         return best_full
 
     def _soft_hotspot_relief(self, full, benchmark, plc, strength, steps):
