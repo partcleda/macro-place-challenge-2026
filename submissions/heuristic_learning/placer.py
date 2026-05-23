@@ -161,7 +161,8 @@ class HeuristicLearningPlacer:
         return (
             n_hard <= 320
             and best_score >= 1.45
-            and features["degree_cv"] <= 4.2
+            and features["utilization"] >= 0.30
+            and features["degree_cv"] <= 5.0
         )
 
     def _official_hard_local_search(self, full, benchmark, plc, best_score, features, start_time):
