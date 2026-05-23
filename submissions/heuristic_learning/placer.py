@@ -168,6 +168,13 @@ class HeuristicLearningPlacer:
         ):
             return 0.25
         if (
+            250 <= n_hard <= 290
+            and features["utilization"] >= 0.52
+            and 3.7 <= features["size_cv"] <= 4.2
+            and features["degree_cv"] <= 1.0
+        ):
+            return 0.06
+        if (
             270 <= n_hard <= 320
             and 0.48 <= features["utilization"] <= 0.52
             and 4.2 <= features["size_cv"] <= 4.8
@@ -261,6 +268,13 @@ class HeuristicLearningPlacer:
             and 0.34 <= features["utilization"] <= 0.38
             and features["size_cv"] <= 3.8
             and features["degree_cv"] <= 0.8
+        ):
+            return 2
+        if (
+            250 <= n_hard <= 290
+            and features["utilization"] >= 0.52
+            and 3.7 <= features["size_cv"] <= 4.2
+            and features["degree_cv"] <= 1.0
         ):
             return 2
         if (
