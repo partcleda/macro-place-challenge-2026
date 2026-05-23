@@ -143,6 +143,7 @@ def _candidate_rows(mod, placer, benchmark, plc):
             candidate_pos = placer._legalize(candidate_pos, movable, sizes, cw, ch, gap=0.035)
         full = benchmark.macro_positions.clone()
         full[:n_hard] = torch.tensor(candidate_pos, dtype=torch.float32)
+        full = placer._clamp_movable_to_canvas(full, benchmark)
         costs = compute_proxy_cost(full, benchmark, plc)
         valid = costs["overlap_count"] == 0
         full_by_label[label] = full

@@ -155,6 +155,12 @@ class HeuristicLearningPlacer:
             and features["size_cv"] <= 4.2
         ):
             return 0.35
+        if (
+            n_hard < 240
+            and 0.43 <= features["utilization"] <= 0.48
+            and 3.0 <= features["degree_cv"] <= 4.2
+        ):
+            return 0.15
         return None
 
     def _enable_official_hard_search(self, features, n_hard, best_score):
@@ -273,6 +279,7 @@ class HeuristicLearningPlacer:
                 candidate = cur.clone()
                 candidate[idx, 0] = tx
                 candidate[idx, 1] = ty
+                candidate = self._clamp_movable_to_canvas(candidate, benchmark)
                 costs = _quiet_call(compute_proxy_cost, candidate, benchmark, plc)
                 scored += 1
                 score = float(costs["proxy_cost"]) if costs["overlap_count"] == 0 else float("inf")
@@ -379,6 +386,7 @@ class HeuristicLearningPlacer:
                 pos = self._legalize(pos, movable, sizes, cw, ch, gap=0.035)
             full = benchmark.macro_positions.clone()
             full[:n_hard] = torch.tensor(pos, dtype=torch.float32)
+            full = self._clamp_movable_to_canvas(full, benchmark)
             score = self._score(full, benchmark, plc)
             if self.debug:
                 print(f"[HL_DEBUG] {label}: {score:.6f}", flush=True)
@@ -390,6 +398,7 @@ class HeuristicLearningPlacer:
             safe = self._will_seed_legalize(initial, movable, sizes, cw, ch)
             best_full = benchmark.macro_positions.clone()
             best_full[:n_hard] = torch.tensor(safe, dtype=torch.float32)
+            best_full = self._clamp_movable_to_canvas(best_full, benchmark)
         else:
             soft_strength = None if plc is None else self._soft_strength(
                 features, n_hard, benchmark.num_soft_macros
@@ -413,12 +422,40 @@ class HeuristicLearningPlacer:
             best_full, best_score = self._official_hard_local_search(
                 best_full, benchmark, plc, best_score, features, start_time
             )
-        return best_full
+        return self._clamp_movable_to_canvas(best_full, benchmark)
+
+    def _clamp_movable_to_canvas(self, full, benchmark, margin=1e-4):
+        out = full.clone()
+        positions = out.cpu().numpy().astype(np.float64)
+        sizes = benchmark.macro_sizes.cpu().numpy().astype(np.float64)
+        fixed = benchmark.macro_fixed.cpu().numpy().astype(bool)
+        movable_idx = np.where(~fixed)[0]
+        if movable_idx.size == 0:
+            return out
+
+        cw = float(benchmark.canvas_width)
+        ch = float(benchmark.canvas_height)
+        low_x = sizes[movable_idx, 0] / 2.0 + margin
+        high_x = cw - sizes[movable_idx, 0] / 2.0 - margin
+        low_y = sizes[movable_idx, 1] / 2.0 + margin
+        high_y = ch - sizes[movable_idx, 1] / 2.0 - margin
+        positions[movable_idx, 0] = np.where(
+            high_x >= low_x,
+            np.clip(positions[movable_idx, 0], low_x, high_x),
+            cw / 2.0,
+        )
+        positions[movable_idx, 1] = np.where(
+            high_y >= low_y,
+            np.clip(positions[movable_idx, 1], low_y, high_y),
+            ch / 2.0,
+        )
+        out[:] = torch.tensor(positions, dtype=torch.float32)
+        return out
 
     def _soft_hotspot_relief(self, full, benchmark, plc, strength, steps):
         from macro_place.objective import compute_proxy_cost
 
-        out = full.clone()
+        out = self._clamp_movable_to_canvas(full.clone(), benchmark)
         n_hard = benchmark.num_hard_macros
         if benchmark.num_soft_macros == 0:
             return out
