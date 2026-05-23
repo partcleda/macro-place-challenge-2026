@@ -222,7 +222,7 @@ class HeuristicLearningPlacer:
             and features["utilization"] < 0.20
             and features["degree_cv"] <= 0.8
         ):
-            return 0.25
+            return 0.35
         if (
             360 <= n_hard < 430
             and features["utilization"] < 0.32
