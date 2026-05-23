@@ -181,13 +181,14 @@ def _candidate_rows(mod, placer, benchmark, plc):
     runtime_rows = [row for row in rows if row["selected_by_budget"] and row["valid"]]
     if soft_strength is not None and runtime_rows:
         best_hard = min(runtime_rows, key=lambda row: row["proxy_cost"])
+        soft_steps = placer._soft_steps(features, n_hard, benchmark.num_soft_macros)
         score_start = time.time()
         soft_full = placer._soft_hotspot_relief(
             full_by_label[best_hard["label"]],
             benchmark,
             plc,
             strength=soft_strength,
-            steps=1,
+            steps=soft_steps,
         )
         costs = compute_proxy_cost(soft_full, benchmark, plc)
         full_by_label["soft_hotspot_mild"] = soft_full
@@ -208,7 +209,7 @@ def _candidate_rows(mod, placer, benchmark, plc):
                     "recipe": "soft_hotspot_mild",
                     "source": best_hard["label"],
                     "strength": soft_strength,
-                    "steps": 1,
+                    "steps": soft_steps,
                 },
                 "features": features,
             }
