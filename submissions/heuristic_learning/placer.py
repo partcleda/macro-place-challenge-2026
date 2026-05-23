@@ -142,6 +142,12 @@ class HeuristicLearningPlacer:
             return None
         if features["utilization"] < 0.12 and features["degree_cv"] <= 1.2:
             return 0.25
+        if (
+            n_hard >= 700
+            and features["utilization"] < 0.20
+            and features["degree_cv"] <= 0.8
+        ):
+            return 0.25
         if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
             return 0.45
         if (
@@ -615,6 +621,12 @@ class HeuristicLearningPlacer:
         base_iters = 900 if features["n_hard"] < 360 else 650
         if features["utilization"] > 0.50:
             base_iters = int(base_iters * 0.85)
+        if (
+            features["n_hard"] >= 700
+            and features["utilization"] < 0.20
+            and features["degree_cv"] <= 0.8
+        ):
+            return []
 
         recipes = [
             {
