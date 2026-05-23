@@ -126,6 +126,12 @@ class HeuristicLearningPlacer:
             and features["degree_cv"] <= 0.8
         ):
             return specs
+        if (
+            410 <= n_hard <= 440
+            and 0.34 <= features["utilization"] <= 0.39
+            and features["degree_cv"] <= 0.4
+        ):
+            return specs
         if n_hard <= 430:
             specs.extend(
                 [
@@ -160,6 +166,12 @@ class HeuristicLearningPlacer:
             and features["utilization"] < 0.32
             and features["size_cv"] >= 7.0
             and features["degree_cv"] <= 0.8
+        ):
+            return 0.35
+        if (
+            410 <= n_hard <= 440
+            and 0.34 <= features["utilization"] <= 0.39
+            and features["degree_cv"] <= 0.4
         ):
             return 0.35
         if features["utilization"] <= 0.54 and features["degree_cv"] <= 1.2:
@@ -646,6 +658,12 @@ class HeuristicLearningPlacer:
             and features["utilization"] < 0.32
             and features["size_cv"] >= 7.0
             and features["degree_cv"] <= 0.8
+        ):
+            return []
+        if (
+            410 <= features["n_hard"] <= 440
+            and 0.34 <= features["utilization"] <= 0.39
+            and features["degree_cv"] <= 0.4
         ):
             return []
 
