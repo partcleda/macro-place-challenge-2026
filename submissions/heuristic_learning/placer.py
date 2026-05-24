@@ -1158,7 +1158,12 @@ class HeuristicLearningPlacer:
             and features["utilization"] < 0.12
             and features["degree_cv"] <= 1.2
         )
-        if not (small_bucket or ibm16_like or very_low_util):
+        high_util_large = (
+            n_hard >= 700
+            and features["utilization"] >= 0.55
+            and features["degree_cv"] <= 1.0
+        )
+        if not (small_bucket or ibm16_like or very_low_util or high_util_large):
             return None
         if (
             240 <= n_hard <= 265
