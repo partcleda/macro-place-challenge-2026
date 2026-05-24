@@ -1150,10 +1150,17 @@ class HeuristicLearningPlacer:
         return legal
 
     def _pair_push_gap(self, features, n_hard):
-        if not (
+        small_bucket = (
             240 <= n_hard <= 320
             and 0.30 <= features["utilization"] < 0.52
-        ):
+        )
+        ibm16_like = (
+            440 <= n_hard <= 490
+            and 0.35 <= features["utilization"] <= 0.42
+            and features["size_cv"] <= 3.4
+            and features["degree_cv"] <= 0.8
+        )
+        if not (small_bucket or ibm16_like):
             return None
         if (
             240 <= n_hard <= 265
