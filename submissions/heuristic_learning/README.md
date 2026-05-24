@@ -25,7 +25,13 @@ Use the sweep helper to collect recipe-level training data for the selector:
 uv run python scripts/sweep_heuristic_learning.py -b ibm02 -b ibm03 -b ibm07 --out /tmp/hl_sweep.jsonl
 ```
 
-The JSONL records benchmark features, candidate labels, official proxy components, approximate selector cost, whether the runtime budget would have selected that candidate, the final soft-hotspot post-pass when enabled, and the bounded official-score local-search candidate when enabled. The current selector uses this evidence to skip radial-spread recipes on high-utilization IBM cases, protect hotspot-relief candidates, keep radial-mild spreading for lower-utilization cases where it improves congestion, and prune recipe variants that do not win in sweep data.
+For a broader proxy-rescue search, run the candidate-search helper. It scores raw-initial repair, pair-push repair, soft-hotspot sweeps over the best hard sources, and bounded official hard local search for candidates that beat the current checkpoint by at least `0.005`:
+
+```bash
+uv run python scripts/search_heuristic_candidates.py --all --resume --time-limit-hours 10 --out /tmp/hl_candidate_search.jsonl
+```
+
+The JSONL records benchmark features, candidate labels, official proxy components, approximate selector cost, whether the runtime budget would have selected that candidate, the final soft-hotspot post-pass when enabled, and the bounded official-score local-search candidate when enabled. The current selector uses this evidence to skip radial-spread recipes on high-utilization IBM cases, protect hotspot-relief candidates, keep radial-mild spreading for lower-utilization cases where it improves congestion, and prune recipe variants that do not win in sweep data. Candidate-search winners should only be integrated when a feature gate matches the intended benchmark bucket, the official evaluator reports zero hard overlaps, and the integrated path improves the checkpoint score by at least `0.003`.
 
 Pair-push notes: a minimal-displacement legalization candidate is gated to small IBM buckets (`240 <= n_hard <= 320`, `0.30 <= utilization < 0.52`), large high-utilization/skewed buckets, one small high-degree `ibm06`-like repair bucket, one very-low-utilization bucket, one high-size-skew `ibm15`-like bucket, and one `ibm16`-like medium bucket. The small low-skew `ibm09`-like bucket uses a wider gap; the other pair-push gates use a fast `0.001` gap. The candidate is appended only when hard-legal, then still competes through the official proxy scorer. Integrated validation improved `ibm01` to `1.0054`, `ibm03` to `1.2812`, `ibm04` to `1.2760`, `ibm06` to `1.6394`, `ibm07` to `1.4322`, `ibm08` to `1.4515`, `ibm09` to `1.0778`, `ibm10` to `1.3255`, `ibm12` to `1.6137`, `ibm15` to `1.5857`, `ibm16` to `1.4808`, and `ibm18` to `1.7658`.
 

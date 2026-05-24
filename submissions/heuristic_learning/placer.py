@@ -569,7 +569,7 @@ class HeuristicLearningPlacer:
                 not _validate_hard(pair_push, sizes, initial, fixed_mask, cw, ch)
                 and self._pair_push_repair_enabled(features, n_hard)
             ):
-                pair_push = self._repair_pair_push_overlaps(
+                pair_push = self._repair_hard_overlaps(
                     pair_push, movable, sizes, cw, ch
                 )
             if _validate_hard(pair_push, sizes, initial, fixed_mask, cw, ch):
@@ -1256,7 +1256,7 @@ class HeuristicLearningPlacer:
     def _overlap_penalty(self, overlaps):
         return sum(overlap_x * overlap_y for _, _, overlap_x, overlap_y in overlaps)
 
-    def _repair_pair_push_overlaps(
+    def _repair_hard_overlaps(
         self, pos, movable, sizes, cw, ch, clearance=1e-4, max_iters=60
     ):
         out = self._clamp_hard_positions(pos, movable, sizes, cw, ch)
@@ -1296,6 +1296,13 @@ class HeuristicLearningPlacer:
                 return out
             out = best[1]
         return out
+
+    def _repair_pair_push_overlaps(
+        self, pos, movable, sizes, cw, ch, clearance=1e-4, max_iters=60
+    ):
+        return self._repair_hard_overlaps(
+            pos, movable, sizes, cw, ch, clearance=clearance, max_iters=max_iters
+        )
 
     def _pair_push_legalize(
         self, pos, movable, sizes, cw, ch, gap=0.001, max_passes=500, damping=0.65
