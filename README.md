@@ -241,37 +241,37 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 8 | "DREAMPlaceProMaxUltra" | **1.0121** | 0.8022 | 1.2047 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 and scored 1.0144, keeping old score. |
 | 9 | "QED" | **1.0266** | 0.7891 | 1.2219 | 0 | 25min/bench | :white_check_mark: | Resubmitted 5/21 (MultiProxyCD v14).|
 | 10 | "Two-IIITK-Kids" | **1.0285** | 0.7905 | 1.2447 | 0 | ~2432s/bench | :white_check_mark: | Resubmitted 5/21 (SmoothGDCDGPSA). Was 1.0301. (Amruth Ayaan Gulawani & Joel Dan Philip, IIIT Kottayam) |
-| 11 | "WAVAG" | **1.0332** | — | — | 0 | 34min/bench | | New 5/21. (Shreyash Nigam) verification in progress...|
-| 12 | "Kagan Dikmen" | **1.035** | — | — | 0 | ~50min/bench | | New 5/21. verification in progress... |
-| 13 | "ArzunPD" | **1.0507** | 0.7800 | 1.3511 | 0 | 50min/bench | :white_check_mark: | Resubmitted 5/21 (Hyperplace). Was 1.1883. |
-| 14 | "QuantSC" | **1.0513** | 0.8277 | 1.2662 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (vzPlace). |
-| 15 | "JaneRT" | **1.0593** | 0.7406 | 1.7205 | 0 | 3500s/bench | :white_check_mark: | New 5/21. (Ujaan Rakshit, Jeet Dekivadia, Himansh Chitkara) |
-| 16 | "MTK" | **1.06** | — | — | 0 | 5min/bench | | Resubmitted 5/21 (Dreamplace++). Was 1.2818 verified. verification in progress...|
-| 17 | "Cezar" | **1.0663** | 0.8182 | 1.3175 | 0 | 4h total | :white_check_mark: |  |
-| 18 | "Talyxion" | **1.0698** | 0.7849 | 1.3522 | 0 | ≈28min/bench | :white_check_mark: | Resubmitted 5/19 (HybridV24). Was 1.2075. (Nguyen Van Thanh) |
-| 19 | "MacroHard" | **1.07** | — | — | 0 | 45min/bench | | New 5/21. (Shengyu Huang) |
-| 20 | "jrslbenn" | **1.079** | — | — | 0 | 35min/bench | | Resubmitted 5/20 (HAPpyPlace). Was 1.353. Judge run incomplete: ibm17 timed out on all 4 workers (3500s), ibm18 not reached. Rerun in progress. |
-| 21 | "Shoom" | **1.0808** | 0.7719 | 1.3484 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/12. Previous variant verified 1.4901. |
-| 22 | "Combobulating" | **1.0815** | — | — | 0 | 10min/bench | | New 5/21. (Lim Ming Chong) |
-| 23 | "Lawnmower" | **1.0877** | 0.8136 | 1.4988 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (GPU DREAMPlace). Was 1.4555 verified. (A. Ma, Stanford & A. Shakya, Princeton) |
-| 24 | "cloooooo" | **1.0948** | — | — | 0 | ~54min/bench | | New 5/21. (Clovis SFEIR) |
-| 25 | "K2HAL" | **1.1083** | — | — | 0 | 25.9min/bench | | New 5/21. (Kaushal Chitturu) |
-| 26 | "JonaU" | **1.1524** | — | — | 0 | 55min/bench | | New 5/13. (Jona Uhe) |
-| 27 | "solomid" | **~1.16** | — | — | 0 | <55min/bench | | New 5/20. (Keith So) Engine-only AVG on 5-benchmark sample (ibm01/03/09/13/17); full-17 pending. |
-| 28 | "Figo" | **1.16** | — | — | 0 | 1800s/bench | | New 5/20. (Andre Marcello Soto Riva Figueira) |
-| 29 | "Hoop Dreams" | **1.1812** | — | — | 0 | 55min/bench | | Resubmitted 5/21 (DREAMTuna). Was 1.2207 verified. (Krithik Sama et al.) |
-| 30 | "ilovekiro" | **1.1994** | — | — | 0 | 51min/bench | | New 5/21. (Krish Kukreja) |
-| 31 | "GOATs" | **1.2** | — | — | 0 | 7min/bench | | New 5/21. (Rishi Chordia et al., IIT Roorkee) |
-| 32 | "Internship pls" | **1.2104** | — | — | 0 | 50min/bench | | New 5/21. (Raj Kothari, Georgia Tech) |
-| 33 | "mlewand" | **1.2109** | — | — | 0 | ~276s/bench | | New 5/20. Resubmitted 5/21 (was 1.2128 as "mlew"). (Maciej Lewandowski) |
-| 34 | "MakerCode" | **1.2153** | — | — | 0 | 16h total | | Resubmitted 5/20 (v4). Was 1.2282. (Wei Yet Ng) |
-| 35 | "Hachimi" | **1.226** | — | — | 0 | 40min/bench | | New 5/20. (Ching Yi Teoh, Xiaoyi Jiang, Guanlun Sun) |
-| 36 | "RuslanPlace" | **1.2327** | — | — | 0 | ~55min/bench | | New 5/21. (Ruslan Malsagov) |
-| 37 | "KKPlace" | **1.2451** | — | — | 0 | 55min/bench | | New 5/13. (Kenneth Hou) |
-| 38 | "IDK" | **1.2477** | 0.8906 | 1.5584 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (Graph-Grader + LAHC). |
-| 39 | "Top 3" | **1.2527** | — | — | 0 | 4.2min total | | New 5/21. (Robert Saab, Arnab Mandal, Sparsh Kochhar, UToronto) |
-| 40 | "The Basin Jumpers" | **1.2602** | — | — | 0 | 28min/bench | | Resubmitted 5/20 (DREAMPlace+RePlAce+SA). Was 1.2748. (William Zhang & Leon Do) |
-| 41 | "Adam_A" | **1.2655** | — | — | 0 | 682s/bench | | New 5/10. |
+| 11 | "ArzunPD" | **1.0507** | 0.7800 | 1.3511 | 0 | 50min/bench | :white_check_mark: | Resubmitted 5/21 (Hyperplace). Was 1.1883. |
+| 12 | "QuantSC" | **1.0513** | 0.8277 | 1.2662 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (vzPlace). |
+| 13 | "JaneRT" | **1.0593** | 0.7406 | 1.7205 | 0 | 3500s/bench | :white_check_mark: | New 5/21. (Ujaan Rakshit, Jeet Dekivadia, Himansh Chitkara) |
+| 14 | "Cezar" | **1.0663** | 0.8182 | 1.3175 | 0 | 4h total | :white_check_mark: |  |
+| 15 | "WAVAG" | **1.0689** | 0.8268 | 1.3419 | 0 | 34min/bench | :white_check_mark: | New 5/21. (Shreyash Nigam) |
+| 16 | "Talyxion" | **1.0698** | 0.7849 | 1.3522 | 0 | ≈28min/bench | :white_check_mark: | Resubmitted 5/19 (HybridV24). Was 1.2075. (Nguyen Van Thanh) |
+| 17 | "MacroHard" | **1.07** | — | — | 0 | 45min/bench | | New 5/21. (Shengyu Huang) |
+| 18 | "Kagan Dikmen" | **1.0705** | 0.7926 | 1.3125 | 0 | ~50min/bench | :white_check_mark: | New 5/21. |
+| 19 | "jrslbenn" | **1.079** | — | — | 0 | 35min/bench | | Resubmitted 5/20 (HAPpyPlace). Was 1.353. Judge run incomplete: ibm17 timed out on all 4 workers (3500s), ibm18 not reached. Rerun in progress. |
+| 20 | "Shoom" | **1.0808** | 0.7719 | 1.3484 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/12. Previous variant verified 1.4901. |
+| 21 | "Combobulating" | **1.0815** | — | — | 0 | 10min/bench | | New 5/21. (Lim Ming Chong) |
+| 22 | "Lawnmower" | **1.0877** | 0.8136 | 1.4988 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (GPU DREAMPlace). Was 1.4555 verified. (A. Ma, Stanford & A. Shakya, Princeton) |
+| 23 | "cloooooo" | **1.0948** | — | — | 0 | ~54min/bench | | New 5/21. (Clovis SFEIR) |
+| 24 | "K2HAL" | **1.1083** | — | — | 0 | 25.9min/bench | | New 5/21. (Kaushal Chitturu) |
+| 25 | "JonaU" | **1.1524** | — | — | 0 | 55min/bench | | New 5/13. (Jona Uhe) |
+| 26 | "solomid" | **~1.16** | — | — | 0 | <55min/bench | | New 5/20. (Keith So) Engine-only AVG on 5-benchmark sample (ibm01/03/09/13/17); full-17 pending. |
+| 27 | "Figo" | **1.16** | — | — | 0 | 1800s/bench | | New 5/20. (Andre Marcello Soto Riva Figueira) |
+| 28 | "Hoop Dreams" | **1.1812** | — | — | 0 | 55min/bench | | Resubmitted 5/21 (DREAMTuna). Was 1.2207 verified. (Krithik Sama et al.) |
+| 29 | "ilovekiro" | **1.1994** | — | — | 0 | 51min/bench | | New 5/21. (Krish Kukreja) |
+| 30 | "GOATs" | **1.2** | — | — | 0 | 7min/bench | | New 5/21. (Rishi Chordia et al., IIT Roorkee) |
+| 31 | "Internship pls" | **1.2104** | — | — | 0 | 50min/bench | | New 5/21. (Raj Kothari, Georgia Tech) |
+| 32 | "mlewand" | **1.2109** | — | — | 0 | ~276s/bench | | New 5/20. Resubmitted 5/21 (was 1.2128 as "mlew"). (Maciej Lewandowski) |
+| 33 | "MakerCode" | **1.2153** | — | — | 0 | 16h total | | Resubmitted 5/20 (v4). Was 1.2282. (Wei Yet Ng) |
+| 34 | "Hachimi" | **1.226** | — | — | 0 | 40min/bench | | New 5/20. (Ching Yi Teoh, Xiaoyi Jiang, Guanlun Sun) |
+| 35 | "RuslanPlace" | **1.2327** | — | — | 0 | ~55min/bench | | New 5/21. (Ruslan Malsagov) |
+| 36 | "KKPlace" | **1.2451** | — | — | 0 | 55min/bench | | New 5/13. (Kenneth Hou) |
+| 37 | "IDK" | **1.2477** | 0.8906 | 1.5584 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (Graph-Grader + LAHC). |
+| 38 | "Top 3" | **1.2527** | — | — | 0 | 4.2min total | | New 5/21. (Robert Saab, Arnab Mandal, Sparsh Kochhar, UToronto) |
+| 39 | "The Basin Jumpers" | **1.2602** | — | — | 0 | 28min/bench | | Resubmitted 5/20 (DREAMPlace+RePlAce+SA). Was 1.2748. (William Zhang & Leon Do) |
+| 40 | "Adam_A" | **1.2655** | — | — | 0 | 682s/bench | | New 5/10. |
+| 41 | "MTK" | **1.2744** | 0.9159 | 1.8180 | 0 | 5min/bench | :white_check_mark: | Resubmitted 5/21 (Dreamplace++). Previous judge run: 1.2818. |
 | 42 | "RoRa" | **1.2788** | 0.9577 | 1.6222 | 0 | 2.6h total | :white_check_mark: | Verified 1.2788 (self-reported 1.2723). Resubmitted 5/1. |
 | 43 | "V5" | **1.2811** | — | — | 0 | ~30min/bench | | Resubmitted 5/21 (StructurePlace). Was 1.3382. (Sanjay Senthil & Rishi Gandhe, UT Austin) |
 | 44 | "KLA MACH" | **1.2946** | 0.9286 | 1.6415 | 0 | 56min/bench | :white_check_mark: | Resubmitted 5/21 (phase53). Was 1.0709. (Chuanqi Chen) |
@@ -351,9 +351,9 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | — | SA (baseline) | 2.1251 | 1.3166 | 3.6726 | 0 | — | :white_check_mark: | |
 | 117 | "A²" | **2.1385** | — | — | 0 | 3.93s/bench | | New 5/19. (Alexander Adams, Univ. of Pittsburgh) |
 | 118 | "Vasu's Snake" | **2.1737** | — | — | 0 | 0.0035s/bench | | New 5/21. (Aditya Vaswani) |
+| — | Greedy Row (demo) | 2.2109 | 1.6728 | 2.7696 | 0 | 0.3s total | :white_check_mark: | |
 | 119 | "Satisficing" | **2.2109** | — | — | 0 | <1s/bench | | New 5/17. (Noah Cencini) |
 | 120 | "Fayaaz" | **2.2109** | — | — | 0 | 0.06s/bench | | New 5/21. (Fayaaz Ahmed) |
-| — | Greedy Row (demo) | 2.2109 | 1.6728 | 2.7696 | 0 | 0.3s total | :white_check_mark: | |
 | 121 | "The Sun Also Places Macros" | **3.60183** | — | — | 0 | 1804.92s/bench | | New 5/21. (Haripratiik Arunkumar Malarkodi) |
 | 122 | "SnoobQuants" | **7.215** | — | — | 0 | 7.37s/bench | | New 5/21. (Shubhayu Brahmachari) |
 | — | "Wire We Even Here" | pending | — | — | — | ~80s/bench | | New 5/21. (Claren Ochieng, UPenn) No definitive score reported; expects 1.3–1.4 with full 1h budget. |
@@ -362,7 +362,6 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | DQ | "Mike Gao" | self-reported 1.3255 | — | — | 1939 | 16min/bench | | 1939 overlaps (old submission). Resubmitted 5/21 as "Place, Route, Roll". |
 | DQ | "Archgen" | self-reported 0.9687 | — | — | 1 | 3300s/bench | :white_check_mark: | 1 overlap on ibm17 (judge run). Judge AVG=1.0203. Resubmitted 5/21 (xplace+CD). (Naveen Venkat & Hariharan) |
 | DQ | "BakaBobo" | self-reported 1.4044 | — | — | — | 282s/bench | | Missing import — code won't run. |
-
 *Submit your results via the [Submission Link](https://forms.gle/YDRtYV5Vq68SZgKW9)!*
 
 ## 🤔 FAQ
