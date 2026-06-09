@@ -1,0 +1,6 @@
+# Large / regenerable / PII — never commit
+clones/
+logs/
+form_export.txt
+*.tsv
+hachimi_x/
