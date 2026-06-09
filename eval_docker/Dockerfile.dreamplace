@@ -1,0 +1,73 @@
+FROM pytorch/pytorch:2.5.1-cuda12.4-cudnn9-devel
+
+ENV DEBIAN_FRONTEND=noninteractive
+
+# System deps for DREAMPlace build (skip system cmake — install 3.28 below)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    git build-essential \
+    libboost-all-dev libeigen3-dev \
+    flex bison libfl-dev \
+    zlib1g-dev libcairo2-dev \
+    tcl-dev tk-dev \
+    wget libssl-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install CMake 3.28 (DREAMPlace's Limbo library breaks on CMake 3.30+)
+RUN wget -q https://github.com/Kitware/CMake/releases/download/v3.28.6/cmake-3.28.6-linux-x86_64.tar.gz && \
+    tar xzf cmake-3.28.6-linux-x86_64.tar.gz -C /opt && \
+    ln -sf /opt/cmake-3.28.6-linux-x86_64/bin/cmake /usr/local/bin/cmake && \
+    rm cmake-3.28.6-linux-x86_64.tar.gz
+
+# Python deps DREAMPlace needs
+RUN pip install --no-cache-dir numpy scipy matplotlib pyyaml shapely
+
+# Clone DREAMPlace
+RUN cd /opt && \
+    git clone --recursive https://github.com/limbo018/DREAMPlace.git && \
+    cd DREAMPlace && \
+    git submodule update --init --recursive
+
+# Force CUDA on (torch.cuda.is_available() is False during docker build)
+RUN sed -i 's/list(GET TORCH_OUTPUT_LIST 1 TORCH_ENABLE_CUDA)/set(TORCH_ENABLE_CUDA 1)/' /opt/DREAMPlace/cmake/TorchExtension.cmake
+
+# Build DREAMPlace for Ada Lovelace (sm_89)
+RUN cd /opt/DREAMPlace && \
+    mkdir build && cd build && \
+    cmake .. \
+        -DCMAKE_INSTALL_PREFIX=/opt/DREAMPlace/install \
+        -DPython_EXECUTABLE=$(which python3) \
+        -DCMAKE_CUDA_FLAGS="-gencode=arch=compute_80,code=sm_80" \
+        -DCMAKE_CXX_ABI=0 && \
+    make -j$(nproc) -k || true && \
+    make install -k || true
+
+# Set working directory
+WORKDIR /challenge
+
+# Copy the challenge evaluation infrastructure
+COPY macro_place/ /challenge/macro_place/
+COPY pyproject.toml /challenge/pyproject.toml
+COPY requirements.txt /challenge/requirements.txt
+
+# Copy benchmarks
+COPY external/MacroPlacement/Testcases/ICCAD04/ /challenge/external/MacroPlacement/Testcases/ICCAD04/
+
+# Copy PlacementCost evaluator
+COPY external/MacroPlacement/CodeElements/Plc_client/ /challenge/external/MacroPlacement/CodeElements/Plc_client/
+
+# Copy example submissions
+COPY submissions/examples/ /challenge/submissions/examples/
+
+# Install challenge package
+RUN pip install --no-cache-dir -e . && \
+    pip install --no-cache-dir scipy tqdm cairocffi torch-optimizer ncg-optimizer
+
+# Make DREAMPlace install available on PYTHONPATH
+ENV DREAMPLACE_INSTALL=/opt/DREAMPlace/install
+ENV PYTHONPATH="${DREAMPLACE_INSTALL}:${DREAMPLACE_INSTALL}/dreamplace:${PYTHONPATH}"
+
+# Wrapper script to inject compiled .so into bundled DREAMPlace submissions
+COPY eval_docker/run_dreamplace_eval.sh /challenge/run_dreamplace_eval.sh
+RUN chmod +x /challenge/run_dreamplace_eval.sh
+
+ENTRYPOINT ["/challenge/run_dreamplace_eval.sh"]
