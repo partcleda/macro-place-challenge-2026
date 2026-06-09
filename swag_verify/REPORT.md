@@ -6,11 +6,11 @@
 
 ## Summary
 
-- **ELIGIBLE**: 59
-- **FAIL**: 24
+- **ELIGIBLE**: 60
+- **FAIL**: 23
 - **SKIPPED**: 3
 
-Verdict breakdown (run set): {'PASS': 59, 'CRASH': 8, 'CLONE_FAIL': 5, 'TIMEOUT': 1, 'FAIL_DP': 3, 'NO_ENTRY': 3, 'MISSING_DEP': 3, 'INVALID': 1}
+Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT': 1, 'FAIL_DP': 4, 'NO_ENTRY': 3, 'MISSING_DEP': 3}
 
 ## Per-team
 
@@ -55,6 +55,7 @@ Verdict breakdown (run set): {'PASS': 59, 'CRASH': 8, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 81 | 1Brown1Yellow | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2018 | `m5_gwtw_sa_placer.py` | 19s |
 | 82 | Captain.Rhinoceros | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.0979 | `submissions/jack_hybrid_baseline.py` | 51s |
 | 83 | BZC | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.1355 | `submissions/final/placer.py` | 96s |
+| 85 | Quantux | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2233 | `submissions/quantux/quantuxseedplacer_sqa_replace.py` |  |
 | 87 | blindfold | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2253 | `sa_solver.py` | 6s |
 | 88 | ZeroLatency | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2253 | `placer/placer.py` | 7s |
 | 91 | WeldonWarriors | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2253 | `submissions/v12/placer.py` | 18s |
@@ -86,21 +87,20 @@ Verdict breakdown (run set): {'PASS': 59, 'CRASH': 8, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 34 | MakerCode | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/Weiyet/macro-place-challenge-2026/' not  | `1s` |  |
 | 36 | RuslanPlace | ❌ FAIL | FAIL_DP: rc=1 IndexError: 2 | `placer.py` |  |
 | 52 | MacroBioPlacement | ❌ FAIL | NO_ENTRY: no class with place(self,benchmark) found | `` | 1s |
-| 53 | Jaideep Padhi | ❌ FAIL | CRASH: rc=1 subprocess.CalledProcessError: Command '['/opt/conda/bin/python', '/submission | `submissions/dreamplace_only/placer.py` | 2s |
+| 53 | Jaideep Padhi | ❌ FAIL | FAIL_DP: rc=1 FileNotFoundError: [Errno 2] No such file or directory: '/challenge/submissi | `submissions/final_placer/placer.py` |  |
 | 54 | Barsat Khadka | ❌ FAIL | CRASH: rc=1 RuntimeError: view size is not compatible with input tensor's size and stride  | `soln.py` |  |
 | 65 | Praveen V | ❌ FAIL | CRASH: rc=1 AttributeError: module 'torch' has no attribute 'Device' | `submissions/praveen/placer.py` |  |
-| 66 | No Man's Sky | ❌ FAIL | MISSING_DEP: No module named '_placer_core' | `submissions/straple/placer.py` | 5s |
+| 66 | No Man's Sky | ❌ FAIL | MISSING_DEP: _placer_core: ships cpp source (placer_core.cpp) but no build recipe in their | `submissions/straple/placer.py` |  |
 | 72 | ETH Zurich Student | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/BasilGrande/MacroPlaceChallenge2026/' no | `0s` |  |
 | 73 | another Waterloo kid | ⏭️ SKIPPED | Modal cloud dispatch — cannot run air-gapped | `` |  |
 | 75 | Dragonfly | ❌ FAIL | MISSING_DEP: No module named 'beartype' | `submission_eval/macroformer/placer.py` | 3s |
-| 85 | Quantux | ❌ FAIL | INVALID: overlaps present | `submissions/quantux/quantuxplacer.py` | 19s |
 | 90 | SEVmakers | ⏭️ SKIPPED | private repo — no judge access | `` |  |
 | 92 | TROJANMurugan | ❌ FAIL | CRASH: rc=1 IndexError: 2 | `eval_bridge.py` | 3s |
 | 96 | UT Austin - SL | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/samlin-2025/Partcl-Macro-Placement-Chall | `1s` |  |
 | 97 | 6ummy | ❌ FAIL | CRASH: rc=1 FileNotFoundError: [Errno 2] No such file or directory: 'wsl' | `submissions/dreamplace_placer.py` | 3s |
 | 100 | ICAS_placer | ❌ FAIL | FAIL_DP: rc=1 ImportError: cannot import name 'Params' from 'dreamplace' (unknown location | `placer.py` |  |
 | 102 | UT Austin - RH | ⏭️ SKIPPED | no resolvable repo URL (profile link only / private) | `` |  |
-| 103 | Besson-PLR | ❌ FAIL | MISSING_DEP: No module named 'macro_packer' | `submissions/GeometricLegalizer/placer.py` | 5s |
+| 103 | Besson-PLR | ❌ FAIL | MISSING_DEP: macro_packer C++ ext does not build from their setup.py in eval env | `submissions/GeometricLegalizer/placer.py` |  |
 | 107 | Mr_Chonk | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/MasterChonk/Macro-placement-algo/' not f | `0s` |  |
 
 ## Caveats (eligible-but-borderline)
