@@ -232,26 +232,26 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | Rank | Team | Avg Proxy Cost | Best | Worst | Overlaps | Runtime | Verified | Notes |
 |------|------|---------------|------|-------|----------|---------|----------|-------|
 | 1 | "Archgen" | **0.9507** | 0.7417 | 1.1839 | 0 | ~3290s/bench | :white_check_mark: | Re-verified via team Dockerfile (submission_8.py, xplace+CD): 17/17 valid, 0 overlaps. (Naveen Venkat & Hariharan) |
-| 2 | "Klein-4" | **0.9846** | 0.7535 | 1.1670 | 0 | ~3290s/bench | :white_check_mark: | New 5/21. (Chaithu Talasila & Alan Schwartz, UT Austin) |
-| 3 | "tobias-x" | **0.9884** | 0.7685 | 1.1609 | 0 | 40min/bench | :white_check_mark: | New 5/20. (Tobias Franks) |
-| 4 | "Vibe" | **0.9939** | 0.7539 | 1.1585 | 0 | 516s/bench | :white_check_mark: | Resubmitted 5/21 (VibePlacer). Was 1.0003. |
-| 5 | "Macro Polo" | **0.9965** | 0.7470 | 1.2153 | 0 | ~1080s/bench | :white_check_mark: |  |
-| 6 | "thinkorplace" | **0.9974** | 0.7829 | 1.2602 | 0 | 12min/bench | :white_check_mark: | Resubmitted 5/20 (thinkorplace-v2). Was 1.0771. |
-| 7 | "JaneRT" | **0.9978** | 0.7335 | 1.2582 | 0 | 3500s/bench | :white_check_mark: | New 5/21. (Ujaan Rakshit, Jeet Dekivadia, Himansh Chitkara) |
-| 8 | "Carrotato" | **1.0103** | 0.7776 | 1.2173 | 0 | ~15min/bench | :white_check_mark: | Resubmitted 5/21 (Triton BO3). Was 0.9671. (Rishi Gottumukkala) |
-| 9 | "vmallela" | **1.0109** | 0.7644 | 1.2921 | 0 | 15.5h total | :white_check_mark: | Verified 1.0109 (self-reported 1.1). |
-| 10 | "DREAMPlaceProMaxUltra" | **1.0121** | 0.8022 | 1.2047 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 and scored 1.0144, keeping old score. |
-| 11 | "QED" | **1.0266** | 0.7891 | 1.2219 | 0 | 25min/bench | :white_check_mark: | Resubmitted 5/21 (MultiProxyCD v14).|
-| 12 | "Two-IIITK-Kids" | **1.0285** | 0.7905 | 1.2447 | 0 | ~2432s/bench | :white_check_mark: | Resubmitted 5/21 (SmoothGDCDGPSA). Was 1.0301. (Amruth Ayaan Gulawani & Joel Dan Philip, IIIT Kottayam) |
-| 13 | "ArzunPD" | **1.0507** | 0.7800 | 1.3511 | 0 | 50min/bench | :white_check_mark: | Resubmitted 5/21 (Hyperplace). Was 1.1883. |
-| 14 | "QuantSC" | **1.0513** | 0.8277 | 1.2662 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (vzPlace). |
-| 15 | "Cezar" | **1.0663** | 0.8182 | 1.3175 | 0 | 4h total | :white_check_mark: |  |
-| 16 | "WAVAG" | **1.0689** | 0.8268 | 1.3419 | 0 | 34min/bench | :white_check_mark: | New 5/21. (Shreyash Nigam) |
-| 17 | "Talyxion" | **1.0698** | 0.7849 | 1.3522 | 0 | ≈28min/bench | :white_check_mark: | Resubmitted 5/19 (HybridV24). Was 1.2075. (Nguyen Van Thanh) |
-| 18 | "MacroHard" | **1.07** | — | — | 0 | 45min/bench | | New 5/21. (Shengyu Huang) |
-| 19 | "Kagan Dikmen" | **1.0705** | 0.7926 | 1.3125 | 0 | ~50min/bench | :white_check_mark: | New 5/21. |
-| 20 | "jrslbenn" | **1.079** | — | — | 0 | 35min/bench | | Resubmitted 5/20 (HAPpyPlace). Was 1.353. Judge run incomplete: ibm17 timed out on all 4 workers (3500s), ibm18 not reached. Rerun in progress. |
-| 21 | "Shoom" | **1.0808** | 0.7719 | 1.3484 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/12. Previous variant verified 1.4901. |
+| 2 | "Shoom" | **0.9842** | 0.7465 | 1.1934 | 0 | 55min/bench | :white_check_mark: | Re-verified via team Dockerfile (numba ProxCD refinement): 17/17 valid, 0 overlaps. Was 1.0808. (Andrey Shiryaev) |
+| 3 | "Klein-4" | **0.9846** | 0.7535 | 1.1670 | 0 | ~3290s/bench | :white_check_mark: | New 5/21. (Chaithu Talasila & Alan Schwartz, UT Austin) |
+| 4 | "tobias-x" | **0.9884** | 0.7685 | 1.1609 | 0 | 40min/bench | :white_check_mark: | New 5/20. (Tobias Franks) |
+| 5 | "Vibe" | **0.9939** | 0.7539 | 1.1585 | 0 | 516s/bench | :white_check_mark: | Resubmitted 5/21 (VibePlacer). Was 1.0003. |
+| 6 | "Macro Polo" | **0.9965** | 0.7470 | 1.2153 | 0 | ~1080s/bench | :white_check_mark: |  |
+| 7 | "thinkorplace" | **0.9974** | 0.7829 | 1.2602 | 0 | 12min/bench | :white_check_mark: | Resubmitted 5/20 (thinkorplace-v2). Was 1.0771. |
+| 8 | "JaneRT" | **0.9978** | 0.7335 | 1.2582 | 0 | 3500s/bench | :white_check_mark: | New 5/21. (Ujaan Rakshit, Jeet Dekivadia, Himansh Chitkara) |
+| 9 | "Carrotato" | **1.0103** | 0.7776 | 1.2173 | 0 | ~15min/bench | :white_check_mark: | Resubmitted 5/21 (Triton BO3). Was 0.9671. (Rishi Gottumukkala) |
+| 10 | "vmallela" | **1.0109** | 0.7644 | 1.2921 | 0 | 15.5h total | :white_check_mark: | Verified 1.0109 (self-reported 1.1). |
+| 11 | "DREAMPlaceProMaxUltra" | **1.0121** | 0.8022 | 1.2047 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 and scored 1.0144, keeping old score. |
+| 12 | "QED" | **1.0266** | 0.7891 | 1.2219 | 0 | 25min/bench | :white_check_mark: | Resubmitted 5/21 (MultiProxyCD v14).|
+| 13 | "Two-IIITK-Kids" | **1.0285** | 0.7905 | 1.2447 | 0 | ~2432s/bench | :white_check_mark: | Resubmitted 5/21 (SmoothGDCDGPSA). Was 1.0301. (Amruth Ayaan Gulawani & Joel Dan Philip, IIIT Kottayam) |
+| 14 | "ArzunPD" | **1.0507** | 0.7800 | 1.3511 | 0 | 50min/bench | :white_check_mark: | Resubmitted 5/21 (Hyperplace). Was 1.1883. |
+| 15 | "QuantSC" | **1.0513** | 0.8277 | 1.2662 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (vzPlace). |
+| 16 | "Cezar" | **1.0663** | 0.8182 | 1.3175 | 0 | 4h total | :white_check_mark: |  |
+| 17 | "WAVAG" | **1.0689** | 0.8268 | 1.3419 | 0 | 34min/bench | :white_check_mark: | New 5/21. (Shreyash Nigam) |
+| 18 | "Talyxion" | **1.0698** | 0.7849 | 1.3522 | 0 | ≈28min/bench | :white_check_mark: | Resubmitted 5/19 (HybridV24). Was 1.2075. (Nguyen Van Thanh) |
+| 19 | "MacroHard" | **1.07** | — | — | 0 | 45min/bench | | New 5/21. (Shengyu Huang) |
+| 20 | "Kagan Dikmen" | **1.0705** | 0.7926 | 1.3125 | 0 | ~50min/bench | :white_check_mark: | New 5/21. |
+| 21 | "jrslbenn" | **1.079** | — | — | 0 | 35min/bench | | Resubmitted 5/20 (HAPpyPlace). Was 1.353. Judge run incomplete: ibm17 timed out on all 4 workers (3500s), ibm18 not reached. Rerun in progress. |
 | 22 | "Combobulating" | **1.0815** | — | — | 0 | 10min/bench | | New 5/21. (Lim Ming Chong) |
 | 23 | "Lawnmower" | **1.0877** | 0.8136 | 1.4988 | 0 | 55min/bench | :white_check_mark: | Resubmitted 5/21 (GPU DREAMPlace). Was 1.4555 verified. (A. Ma, Stanford & A. Shakya, Princeton) |
 | 24 | "cloooooo" | **1.0948** | — | — | 0 | ~54min/bench | | New 5/21. (Clovis SFEIR) |
