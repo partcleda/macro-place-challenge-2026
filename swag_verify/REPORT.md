@@ -6,11 +6,18 @@
 
 ## Summary
 
-- **ELIGIBLE**: 60
-- **FAIL**: 23
+- **ELIGIBLE**: 57
+- **FAIL**: 26
 - **SKIPPED**: 3
 
-Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT': 1, 'FAIL_DP': 4, 'NO_ENTRY': 3, 'MISSING_DEP': 3}
+Verdict breakdown (run set): {'PASS': 57, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT': 1, 'FAIL_DP': 4, 'INVALID': 3, 'NO_ENTRY': 3, 'MISSING_DEP': 3}
+
+## Audit corrections (post-review)
+
+Re-verified before release; two harness issues were found and handled:
+
+1. **PASS-gate substring bug (fixed in `run_one.sh`).** The gate matched `VALID` without first excluding `INVALID` (which *contains* `VALID`), so a placement scored `proxy=N ... INVALID (k overlaps)` false-matched as PASS. Three submissions whose authoritative-scorer verdict was INVALID had been scored eligible and are now reclassified FAIL/INVALID: **ilovekiro** (DREAMPlace ext uncompiled → returned the seed, 69 overlaps), **Binghamton** (seed-equivalent export, 69 overlaps), **SnoobQuants** (1 overlap). The gate now checks INVALID before VALID.
+2. **Team Dockerfiles were not built — false-negative risk (NOT yet re-run).** Per the challenge README, a submission that ships a `Dockerfile` must be built and evaluated in that image; this harness always used the standard image. These FAILs ship a real custom Dockerfile (or hit challenge-API drift) and should be re-run faithfully before being treated as final exclusions: **Dragonfly** (Dockerfile installs beartype+jaxtyping+sklearn+DREAMPlace), **ICAS_placer** (from-source DREAMPlace build Dockerfile), **RuslanPlace** (Dockerfile builds DREAMPlace at the path its placer expects), **Hoop Dreams** (DREAMPlace Dockerfile; was previously verified at 1.2207), and **Combobulating** (requires `Benchmark.netlist_file`/`plc_file`, which the current authoritative API no longer exposes).
 
 ## Per-team
 
@@ -19,7 +26,6 @@ Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 17 | MacroHard | ✅ ELIGIBLE | PASS: ibm01 valid proxy=0.8641 | `submissions/macrohard/placer.py` | 3215s |
 | 19 | jrslbenn | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.0392 | `submissions/hybrid_analytical_placer.py` | 1115s |
 | 26 | JonaU | ✅ ELIGIBLE | PASS: ibm01 valid proxy=0.9862 | `our_placer_final.py` | 3139s |
-| 30 | ilovekiro | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.0385 | `submissions/analytical_placer/placer.py` | 7s |
 | 32 | Internship pls | ✅ ELIGIBLE | PASS: ibm01 valid proxy=0.8828 | `submissions/analytical_placer/placer.py` | 11s |
 | 35 | Hachimi | ✅ ELIGIBLE | PASS: ibm01 valid proxy=0.984758 | `placer.py` |  |
 | 37 | KKPlace | ✅ ELIGIBLE | PASS: ibm01 valid proxy=907 | `kkplace_v16_b_v20_86.py` | 3018s |
@@ -64,7 +70,6 @@ Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 105 | IITM Placement Cell | ✅ ELIGIBLE | PASS: ibm01 valid proxy=2.2640 | `my_placer/placer.py` | 2371s |
 | 106 | sudo optimize --hard | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2583 | `placer.py` | 15s |
 | 108 | Team Olmeta | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.3712 | `submissions/modified_annealing/main.py` | 1575s |
-| 109 | Binghamton | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.0385 | `python/export.py` | 5s |
 | 110 | Can't Place | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.2790 | `fd_placer.py` | 24s |
 | 111 | UT Austin - CT | ✅ ELIGIBLE | PASS: ibm01 valid proxy=0.9146 | `placer.py` | 438s |
 | 112 | rpocevi | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.4908 | `submissions/final_submission.py` | 7s |
@@ -75,13 +80,13 @@ Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 119 | Satisficing | ✅ ELIGIBLE | PASS: ibm01 valid proxy=2.0463 | `placer.py` | 4s |
 | 120 | Fayaaz | ✅ ELIGIBLE | PASS: ibm01 valid proxy=1.7954 | `submissions/fayaaz_placer.py` | 1s |
 | 121 | The Sun Also Places Macros | ✅ ELIGIBLE | PASS: ibm01 valid proxy=2.2944 | `submissions/team_plasma/placer.py` | 200s |
-| 122 | SnoobQuants | ✅ ELIGIBLE | PASS: ibm01 valid proxy=7.0718 | `submissions/snoob965/hybrid_gnn_placer.py` | 7s |
 | 21 | Combobulating | ❌ FAIL | CRASH: rc=1 RuntimeError: CompetitionPlacer requires loader-provided netlist_file and plc_ | `route_aware_pareto_refine.py` | 2s |
 | 23 | cloooooo | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/sfeirc/macro-place-challenge-2026/' not  | `0s` |  |
 | 24 | K2HAL | ❌ FAIL | CRASH: runs self-contained (audit/imports OK) but resolve_plc() returns None for ibm01 | `submissions/macro_placer/cd_lns_placer.py` |  |
 | 27 | solomid | ❌ FAIL | TIMEOUT: exceeded 4200s | `placer.py` | 4201s |
 | 28 | Figo | ❌ FAIL | CRASH: runs self-contained (Benchmark+plc OK) but placer hits IndexError: mask shape [5993 | `submissions/gpu/placer.py` |  |
 | 29 | Hoop Dreams | ❌ FAIL | FAIL_DP: rc=1 ModuleNotFoundError: No module named 'dreamplace.ops.pin_pos.pin_pos_cuda_se | `submissions/dreamtuna/main_placer.py` |  |
+| 30 | ilovekiro | ❌ FAIL | INVALID: ibm01 INVALID (69 overlaps) — DREAMPlace ext uncompiled; placer returned seed ini | `submissions/analytical_placer/placer.py` | 4s |
 | 31 | GOATs | ❌ FAIL | NO_ENTRY: no class with place(self,benchmark) found | `` | 1s |
 | 33 | mlewand | ❌ FAIL | NO_ENTRY: no class with place(self,benchmark) found | `` | 4s |
 | 34 | MakerCode | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/Weiyet/macro-place-challenge-2026/' not  | `1s` |  |
@@ -102,6 +107,8 @@ Verdict breakdown (run set): {'PASS': 60, 'CRASH': 7, 'CLONE_FAIL': 5, 'TIMEOUT'
 | 102 | UT Austin - RH | ⏭️ SKIPPED | no resolvable repo URL (profile link only / private) | `` |  |
 | 103 | Besson-PLR | ❌ FAIL | MISSING_DEP: macro_packer C++ ext does not build from their setup.py in eval env | `submissions/GeometricLegalizer/placer.py` |  |
 | 107 | Mr_Chonk | ❌ FAIL | CLONE_FAIL: fatal: repository 'https://github.com/MasterChonk/Macro-placement-algo/' not f | `0s` |  |
+| 109 | Binghamton | ❌ FAIL | INVALID: ibm01 INVALID (69 overlaps) — export.py emitted a seed-equivalent placement | `python/export.py` | 1s |
+| 122 | SnoobQuants | ❌ FAIL | INVALID: ibm01 INVALID (1 overlaps) — EmergencyShelfPlacer | `submissions/snoob965/hybrid_gnn_placer.py` | 1s |
 
 ## Caveats (eligible-but-borderline)
 

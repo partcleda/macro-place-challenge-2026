@@ -81,13 +81,19 @@ docker rm -f "$CNAME" >/dev/null 2>&1 || true
 if [ $RC -eq 137 ] || [ $RC -eq 124 ]; then
   emit TIMEOUT "exceeded ${TIMEOUT}s" "$ENTRY" "$CONF"; exit 0
 fi
-if grep -qE 'ibm01.*VALID' "$LOG" 2>/dev/null || grep -qE 'proxy=[0-9].*VALID' "$LOG" 2>/dev/null; then
-  PROXY="$(grep -oE 'proxy=[0-9.]+' "$LOG" | head -1 | cut -d= -f2)"
-  emit PASS "ibm01 valid proxy=${PROXY}" "$ENTRY" "$CONF"; exit 0
-fi
-if grep -qE 'INVALID|DISQUALIFIED|overlaps' "$LOG" 2>/dev/null; then
+# NOTE: 'INVALID' contains the substring 'VALID', so the scorer's INVALID
+# verdict MUST be matched first — otherwise 'proxy=N ... INVALID (k overlaps)'
+# false-matches a 'VALID' grep and an overlapping placement is scored PASS.
+# Match the scorer's literal verdict token only (not the word 'overlaps', which
+# also appears in many valid runs' progress output, e.g. 'overlaps=0').
+if grep -qE 'INVALID|DISQUALIFIED' "$LOG" 2>/dev/null; then
   OV="$(grep -oE 'INVALID \([0-9]+ overlaps\)' "$LOG" | head -1)"
   emit INVALID "${OV:-overlaps present}" "$ENTRY" "$CONF"; exit 0
+fi
+# Genuine VALID: a 'VALID' not preceded by 'N' (so it can't be inside INVALID).
+if grep -qE '(^|[^N])VALID' "$LOG" 2>/dev/null; then
+  PROXY="$(grep -oE 'proxy=[0-9.]+' "$LOG" | head -1 | cut -d= -f2)"
+  emit PASS "ibm01 valid proxy=${PROXY}" "$ENTRY" "$CONF"; exit 0
 fi
 if grep -qE 'ModuleNotFoundError|ImportError|No module named' "$LOG" 2>/dev/null; then
   MOD="$(grep -oE "No module named '[^']+'" "$LOG" | head -1)"

@@ -76,6 +76,26 @@ with REPORT.open("w") as f:
     for k in ["ELIGIBLE","FAIL","SKIPPED","PENDING"]:
         if status_ct.get(k): f.write(f"- **{k}**: {status_ct[k]}\n")
     f.write(f"\nVerdict breakdown (run set): {dict(verdict_ct)}\n\n")
+
+    f.write("## Audit corrections (post-review)\n\n")
+    f.write("Re-verified before release; two harness issues were found and handled:\n\n")
+    f.write("1. **PASS-gate substring bug (fixed in `run_one.sh`).** The gate matched `VALID` "
+            "without first excluding `INVALID` (which *contains* `VALID`), so a placement scored "
+            "`proxy=N ... INVALID (k overlaps)` false-matched as PASS. Three submissions whose "
+            "authoritative-scorer verdict was INVALID had been scored eligible and are now "
+            "reclassified FAIL/INVALID: **ilovekiro** (DREAMPlace ext uncompiled → returned the "
+            "seed, 69 overlaps), **Binghamton** (seed-equivalent export, 69 overlaps), "
+            "**SnoobQuants** (1 overlap). The gate now checks INVALID before VALID.\n")
+    f.write("2. **Team Dockerfiles were not built — false-negative risk (NOT yet re-run).** Per the "
+            "challenge README, a submission that ships a `Dockerfile` must be built and evaluated "
+            "in that image; this harness always used the standard image. These FAILs ship a real "
+            "custom Dockerfile (or hit challenge-API drift) and should be re-run faithfully before "
+            "being treated as final exclusions: **Dragonfly** (Dockerfile installs beartype+jaxtyping"
+            "+sklearn+DREAMPlace), **ICAS_placer** (from-source DREAMPlace build Dockerfile), "
+            "**RuslanPlace** (Dockerfile builds DREAMPlace at the path its placer expects), "
+            "**Hoop Dreams** (DREAMPlace Dockerfile; was previously verified at 1.2207), and "
+            "**Combobulating** (requires `Benchmark.netlist_file`/`plc_file`, which the current "
+            "authoritative API no longer exposes).\n\n")
     f.write("## Per-team\n\n")
     f.write("| Rank | Team | Status | Detail | Entry | Time |\n|---|---|---|---|---|---|\n")
     for rank, team, status, detail, entry, t in rows:
