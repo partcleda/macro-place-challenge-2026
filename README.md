@@ -262,7 +262,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 27 | "solomid" | **~1.16** | — | — | 0 | <55min/bench | | ❌ | New 5/20. (Keith So) Engine-only AVG on 5-benchmark sample (ibm01/03/09/13/17); full-17 pending. |
 | 28 | "Figo" | **1.16** | — | — | 0 | 1800s/bench | | ❌ | New 5/20. (Andre Marcello Soto Riva Figueira) |
 | 29 | "Hoop Dreams" | **1.1812** | — | — | 0 | 55min/bench | | ❌ | Resubmitted 5/21 (DREAMTuna). Was 1.2207 verified. (Krithik Sama et al.) |
-| 30 | "ilovekiro" | **1.1994** | — | — | 0 | 51min/bench | | ✅ | New 5/21. (Krish Kukreja) |
+| 30 | "ilovekiro" | **1.1994** | — | — | 0 | 51min/bench | | ❌ | New 5/21. (Krish Kukreja) Swag re-verify: INVALID (69 overlaps on ibm01) — DREAMPlace ext uncompiled, placer returned the seed. |
 | 31 | "GOATs" | **1.2** | — | — | 0 | 7min/bench | | ❌ | New 5/21. (Rishi Chordia et al., IIT Roorkee) |
 | 32 | "Internship pls" | **1.2104** | — | — | 0 | 50min/bench | | ✅ | New 5/21. (Raj Kothari, Georgia Tech) |
 | 33 | "mlewand" | **1.2109** | — | — | 0 | ~276s/bench | | ❌ | New 5/20. Resubmitted 5/21 (was 1.2128 as "mlew"). (Maciej Lewandowski) |
@@ -342,7 +342,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 106 | "sudo optimize --hard" | **1.6951** | — | — | 0 | 30.2s/bench | | ✅ | New 5/21. (Hang Liu) |
 | 107 | "Mr_Chonk" | **1.7031** | — | — | 0 | ~23min/bench | | ❌ | New 5/16. (Kush Voorakkara) |
 | 108 | "Team Olmeta" | **1.7047** | — | — | 0 | ~46.3min/bench | | ✅ | New 5/20. (Lucas Olmeta, WashU) |
-| 109 | "Binghamton" | **1.7621** | — | — | 0 | 2min/bench | | ✅ | New 5/10. Team also reports 1.5375 from an alternate non-legalized run. |
+| 109 | "Binghamton" | **1.7621** | — | — | 0 | 2min/bench | | ❌ | New 5/10. Team also reports 1.5375 from an alternate non-legalized run. Swag re-verify: INVALID (69 overlaps on ibm01) — export emitted a seed-equivalent placement. |
 | 110 | "Can't Place" | **1.8074** | — | — | 0 | 43.36s/bench | | ✅ | New 5/21. (Luke Keely) |
 | 111 | "UT Austin - CT" | **1.8706** | — | — | 0 | 187s/bench | | ✅ | |
 | 112 | "rpocevi" | **1.8894** | — | — | 0 | 22.5s/bench | | ✅ | New 5/9. |
@@ -357,7 +357,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 119 | "Satisficing" | **2.2109** | — | — | 0 | <1s/bench | | ✅ | New 5/17. (Noah Cencini) |
 | 120 | "Fayaaz" | **2.2109** | — | — | 0 | 0.06s/bench | | ✅ | New 5/21. (Fayaaz Ahmed) |
 | 121 | "The Sun Also Places Macros" | **3.60183** | — | — | 0 | 1804.92s/bench | | ✅ | New 5/21. (Haripratiik Arunkumar Malarkodi) |
-| 122 | "SnoobQuants" | **7.215** | — | — | 0 | 7.37s/bench | | ✅ | New 5/21. (Shubhayu Brahmachari) |
+| 122 | "SnoobQuants" | **7.215** | — | — | 0 | 7.37s/bench | | ❌ | New 5/21. (Shubhayu Brahmachari) Swag re-verify: INVALID (1 overlap on ibm01). |
 | — | "Wire We Even Here" | pending | — | — | — | ~80s/bench | |  | New 5/21. (Claren Ochieng, UPenn) No definitive score reported; expects 1.3–1.4 with full 1h budget. |
 | — | "MLforEDA" | **80,00,000** | — | — | — | ~3.5min/bench | |  | New 5/20. (Parv Goyal et al., IIT Guwahati) Score reported on ISPD 2005 benchmarks — not comparable to IBM ICCAD04 proxy scores; pending review. |
 | DQ | "Place, Route, Roll" | self-reported 1.0086 | — | — | — | ~1750s/bench | |  | Judge run failed: DREAMPlace produced no usable placements for ibm01 (65 failed configs). (Mike Gao & Amanda Yin, Cerebras) |
