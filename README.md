@@ -276,7 +276,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 43 | "MTK" | **1.2744** | 0.9159 | 1.8180 | 0 | 5min/bench | :white_check_mark: | Resubmitted 5/21 (Dreamplace++). Previous judge run: 1.2818. |
 | 44 | "RoRa" | **1.2788** | 0.9577 | 1.6222 | 0 | 2.6h total | :white_check_mark: | Verified 1.2788 (self-reported 1.2723). Resubmitted 5/1. |
 | 45 | "V5" | **1.2811** | — | — | 0 | ~30min/bench | | Resubmitted 5/21 (StructurePlace). Was 1.3382. (Sanjay Senthil & Rishi Gandhe, UT Austin) |
-| 46 | "Macropolis" | **1.2841** | — | — | — | 33min | | New 5/19. Self-reported 1.2841, unverified — min-functionality check pending. (Stefan Rattay & Sven Nelles) |
+| 46 | "Macropolis" | **1.2841** | — | — | — | 33min | | New 5/19. Self-reported 1.2841. ibm01 min-functionality VERIFIED: VALID (proxy 1.0276, self-contained run). (Stefan Rattay & Sven Nelles) |
 | 47 | "KLA MACH" | **1.2946** | 0.9286 | 1.6415 | 0 | 56min/bench | :white_check_mark: | Resubmitted 5/21 (phase53). Was 1.0709. (Chuanqi Chen) |
 | 48 | "moddedmacro" | **1.306** | — | — | 0 | ~120s/bench | | New 5/21. (Sibi Vishtan) |
 | 49 | "Vincible" | **1.3155** | — | — | 0 | ~256s/bench | | New 5/20. (Nem Mehta) |
@@ -307,7 +307,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 74 | "Aegir" | **1.4553** | — | — | 0 | 104s/bench | | New 5/9. |
 | 75 | "ETH Zurich Student" | **1.4564** | — | — | 0 | 3.5s/bench | | New 5/20. (Basil Gross) |
 | 76 | "another Waterloo kid" | **1.4568** | — | — | 0 | 118s/bench | | Blocked on Modal cloud dispatch — can't run air-gapped. |
-| 77 | "Nikunj Bhatt" | **1.4575** | — | — | — | 21.1s/bench | | New 5/19. Self-reported 1.4575, unverified — min-functionality check pending. (Nikunj Bhatt & Abhi Raval) |
+| 77 | "Nikunj Bhatt" | **1.4575** | — | — | — | 21.1s/bench | | New 5/19. Self-reported 1.4575. ibm01 min-functionality VERIFIED: VALID (proxy 1.0385 — legalizes the seed to 0 overlaps). (Nikunj Bhatt & Abhi Raval) |
 | 78 | "yoyoshi" | **1.4595** | — | — | 0 | 71.39s/bench | | New 5/20. (Victor Lee, UCLA) |
 | 79 | "Dragonfly" | **1.46** | — | — | 0 | 50min/bench | | New 5/21. (Krishna Shah & Vishal Sundaram) |
 | 80 | "Spectral Convergence" | **1.4713** | — | — | 0 | 20.2min/bench | | New 5/21. (Dimitrios Kalligaridis & Apostolos Kakarantzas) |
@@ -333,7 +333,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 100 | Will Seed (Partcl) | **1.5338** | 1.1625 | 1.7965 | 0 | 35s total | :white_check_mark: | |
 | 101 | "UT Austin - SL" | **1.5341** | — | — | 0 | ~15s/bench | | Resubmitted 5/21 (was 1.5999). (Sam Lin) |
 | 102 | "6ummy" | **1.5361** | — | — | 0 | 221s/bench | | New 5/17. (Jungwoo Shin) |
-| 103 | "AxeCap" | **1.5382** | — | — | — | 55min/bench | | New 5/19. Self-reported 1.5382, unverified — min-functionality check pending. (Krishna Venkatesh et al.) |
+| 103 | "AxeCap" | **1.5382** | — | — | — | 55min/bench | | New 5/19. Self-reported 1.5382. ibm01 min-functionality VERIFIED: VALID (proxy 1.2391, 55-min SA budget). (Krishna Venkatesh et al.) |
 | 104 | "RUDY Can't Fail" | **1.5397** | 1.1927 | 1.8881 | 0 | 6min total | :white_check_mark: | Verified 1.5397 (self-reported 1.3605). |
 | 105 | "dbzero" | **1.5680** | 1.2393 | 1.7956 | 0 | 10min/bench | :white_check_mark: | New 5/21. (Deepak Buddha) |
 | 106 | "ICAS_placer" | **1.577** | — | — | 0 | 153.20s/bench | | New 5/21. (Zixuan Li, Xiaotian Zhao et al., SJTU) |
@@ -345,7 +345,7 @@ Classical methods (SA, RePlAce) have been refined for decades but still have roo
 | 112 | "sudo optimize --hard" | **1.6951** | — | — | 0 | 30.2s/bench | | New 5/21. (Hang Liu) |
 | 113 | "Mr_Chonk" | **1.7031** | — | — | 0 | ~23min/bench | | New 5/16. (Kush Voorakkara) |
 | 114 | "Team Olmeta" | **1.7047** | — | — | 0 | ~46.3min/bench | | New 5/20. (Lucas Olmeta, WashU) |
-| 115 | "A-cat-suki" | **1.7517** | — | — | — | 112.37s/bench | | New 5/19. Self-reported 1.7517, unverified — min-functionality check pending. (Shayon Mitra) |
+| 115 | "A-cat-suki" | **1.7517** | — | — | — | 112.37s/bench | | New 5/19. Self-reported 1.7517. ibm01 min-functionality VERIFIED: VALID (proxy 1.3446). (Shayon Mitra) |
 | 116 | "Binghamton" | **1.7621** | — | — | 0 | 2min/bench | | New 5/10. Team also reports 1.5375 from an alternate non-legalized run. |
 | 117 | "Can't Place" | **1.8074** | — | — | 0 | 43.36s/bench | | New 5/21. (Luke Keely) |
 | 118 | "UT Austin - CT" | **1.8706** | — | — | 0 | 187s/bench | | |
