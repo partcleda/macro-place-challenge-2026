@@ -1,20 +1,21 @@
 # Macro-Placement Challenge — Full Swag-Eligibility Report
 
-_Generated 2026-06-18. Leaderboard standings as of ref `origin/main` (Archgen re-instated at #1)._
+_Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re-instated at #1)._
 
 **Swag bar:** the submission demonstrates minimum functionality — it runs end-to-end and produces a 0-overlap (VALID) placement, judged by the TILOS MacroPlacement scorer. Teams already confirmed by a full judge run qualify automatically.
 
 ## Summary
 
 - **Total leaderboard teams:** 132
-- **Swag-eligible: 101**  =  37 verified (auto-qualify)  +  57 swag-verified (cohort)  +  7 recovered / newly-verified this pass
+- **Swag-eligible: 103**  =  37 verified (auto-qualify)  +  57 swag-verified (cohort)  +  9 recovered / newly-verified this pass
 - **Ineligible: 25**  =  22 failed the swag check  +  3 disqualified
 - **Skipped (could not be run): 4**  (Modal-only / private / unreachable repo)
-- **Re-run in progress: 2**  (original failure was a harness artifact, not a code bug — not yet final)
 
 ### ✅ Changed to VALID this pass (recovered — were previously failed / DQ / unlisted)
 
+- **K2HAL** — RECOVERED — harness artifact (uninitialized benchmark submodule made resolve_plc() return None); re-run self-contained w/ submodule populated -> ibm01 VALID (0.8124). Not a code bug.
 - **Hoop Dreams** — RECOVERED — built team py3.12 Dockerfile (vendored .so); ibm01 VALID (0.9078)
+- **RuslanPlace** — RECOVERED — harness artifact (DREAMPlace had built CPU-only); rebuilt w/ CUDA + configure fix -> ibm01 VALID (0.9350).
 - **Macropolis** — NEW form-only entry; ibm01 VALID (1.0276, self-contained)
 - **Nikunj Bhatt** — NEW form-only entry; ibm01 VALID (1.0385, legalizes seed)
 - **Dragonfly** — RECOVERED — built team Dockerfile; ibm01 VALID (2757s)
@@ -64,7 +65,7 @@ _Generated 2026-06-18. Leaderboard standings as of ref `origin/main` (Archgen re
 | 23 | Combobulating | ❌ INELIGIBLE | API drift — requires Benchmark.netlist_file/plc_file (not in current API); ships no own macro_place. Confirmed self-contained. |
 | 24 | Lawnmower | ✅ ELIGIBLE | verified — full judge run (avg proxy 1.0877) |
 | 25 | cloooooo | ❌ INELIGIBLE | swag-checked (ibm01): CLONE_FAIL: fatal: repository 'https://github.com/sfeirc/macro-place-challenge-2026/' not |
-| 26 | K2HAL | ⏳ RE-RUNNING | harness artifact — uninitialized benchmark submodule made resolve_plc() return None; re-running self-contained w/ submodule populated (not a code bug) |
+| 26 | K2HAL | ✅ ELIGIBLE | RECOVERED — harness artifact (uninitialized benchmark submodule made resolve_plc() return None); re-run self-contained w/ submodule populated -> ibm01 VALID (0.8124). Not a code bug. |
 | 27 | IDK | ✅ ELIGIBLE | verified — full judge run (avg proxy 1.1268) |
 | 28 | JonaU | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=0.9862 |
 | 29 | solomid | ❌ INELIGIBLE | swag-checked (ibm01): TIMEOUT: exceeded 4200s |
@@ -76,7 +77,7 @@ _Generated 2026-06-18. Leaderboard standings as of ref `origin/main` (Archgen re
 | 35 | mlewand | ❌ INELIGIBLE | swag-checked (ibm01): NO_ENTRY: no class with place(self,benchmark) found |
 | 36 | MakerCode | ❌ INELIGIBLE | swag-checked (ibm01): CLONE_FAIL: fatal: repository 'https://github.com/Weiyet/macro-place-challenge-2026/' not |
 | 37 | Hachimi | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=0.984758 |
-| 38 | RuslanPlace | ⏳ RE-RUNNING | harness artifact — DREAMPlace had built CPU-only; rebuilt w/ CUDA + configure fix; placement in progress |
+| 38 | RuslanPlace | ✅ ELIGIBLE | RECOVERED — harness artifact (DREAMPlace had built CPU-only); rebuilt w/ CUDA + configure fix -> ibm01 VALID (0.9350). |
 | 39 | KKPlace | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=907 |
 | 40 | Top 3 | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=1.0436 |
 | 41 | The Basin Jumpers | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=1.0385 |
