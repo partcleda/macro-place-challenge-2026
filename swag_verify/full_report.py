@@ -19,8 +19,8 @@ LB_REF = sys.argv[2] if len(sys.argv) > 2 else "origin/main"
 readme = subprocess.run(["git", "show", f"{LB_REF}:README.md"], capture_output=True, text=True).stdout
 report = (ROOT / "swag_verify" / "REPORT.md").read_text()
 
-# Teams still pending a faithful Dockerfile / API re-run (currently ❌ but may recover).
-RERUN = {"ICAS_placer", "RuslanPlace", "Hoop Dreams", "ilovekiro", "Combobulating"}
+# Teams genuinely not-yet-run / pending (flagged; may still recover).
+RERUN = {"ICAS_placer", "Place, Route, Roll"}
 
 # Verdicts established THIS verification pass — override the leaderboard/report categorization.
 OVERRIDES = {
@@ -30,8 +30,13 @@ OVERRIDES = {
     "Nikunj Bhatt":     ("✅ ELIGIBLE",   "NEW form-only entry; ibm01 VALID (1.0385, legalizes seed)"),
     "AxeCap":           ("✅ ELIGIBLE",   "NEW form-only entry; ibm01 VALID (1.2391)"),
     "A-cat-suki":       ("✅ ELIGIBLE",   "NEW form-only entry; ibm01 VALID (1.3446)"),
+    "Hoop Dreams":      ("✅ ELIGIBLE",   "RECOVERED — built team py3.12 Dockerfile (vendored .so); ibm01 VALID (0.9078)"),
+    "K2HAL":            ("⏳ RE-RUNNING", "harness artifact — uninitialized benchmark submodule made resolve_plc() return None; re-running self-contained w/ submodule populated (not a code bug)"),
+    "RuslanPlace":      ("⏳ RE-RUNNING", "harness artifact — DREAMPlace had built CPU-only; rebuilt w/ CUDA + configure fix; placement in progress"),
+    "ilovekiro":        ("❌ INELIGIBLE", "INVALID — DREAMPlace fails even in its own py3.10 env; returns the seed (69 overlaps). Confirmed via re-run."),
+    "Combobulating":    ("❌ INELIGIBLE", "API drift — requires Benchmark.netlist_file/plc_file (not in current API); ships no own macro_place. Confirmed self-contained."),
     "macrobossesiitp":  ("⏭️ SKIPPED",    "NEW form-only entry; repo unreachable even with judge token — cannot verify"),
-    "MLforEDA":         ("❌ INELIGIBLE", "no place() entry (GNN/RL on ISPD-2005)"),
+    "MLforEDA":         ("❌ INELIGIBLE", "no place() entry (GNN/RL MaskPlace on ISPD-2005, not the challenge interface)"),
     "Wire We Even Here":("❌ INELIGIBLE", "py3.12-only f-string syntax in a py3.11 Dockerfile -> SyntaxError"),
 }
 
@@ -70,7 +75,8 @@ for rank, name, proxy, verified, notes in teams:
         cat, basis, kind = "❓ UNCLASSIFIED", "no verified flag and not in swag report", "other"
     if name in OVERRIDES:
         cat, basis = OVERRIDES[name]
-        kind = "recovered" if cat.startswith("✅") else ("skip" if cat.startswith("⏭️") else "fail")
+        kind = ("recovered" if cat.startswith("✅") else "skip" if cat.startswith("⏭️")
+                else "pending" if cat.startswith("⏳") else "fail")
     if name in RERUN:
         basis += "  ⟳ PENDING RE-RUN (ships own Dockerfile / API-drift; may recover)"
     rows.append((rank, name, cat, basis)); kinds.append(kind)
@@ -96,9 +102,18 @@ W(f"- **Total leaderboard teams:** {total}")
 W(f"- **Swag-eligible: {elig}**  =  {n['verified']} verified (auto-qualify)  +  {n['swag']} swag-verified (cohort)  +  {n['recovered']} recovered / newly-verified this pass")
 W(f"- **Ineligible: {n['fail'] + n['dq']}**  =  {n['fail']} failed the swag check  +  {n['dq']} disqualified")
 W(f"- **Skipped (could not be run): {n['skip']}**  (Modal-only / private / unreachable repo)")
+if n["pending"]:
+    W(f"- **Re-run in progress: {n['pending']}**  (original failure was a harness artifact, not a code bug — not yet final)")
 if n["other"]:
     W(f"- **Unclassified: {n['other']}** (needs a manual look)")
 W()
+_rec = [(name, basis) for (rk, name, cat, basis) in rows
+        if name in OVERRIDES and OVERRIDES[name][0].startswith("✅")]
+if _rec:
+    W("### ✅ Changed to VALID this pass (recovered — were previously failed / DQ / unlisted)\n")
+    for name, basis in _rec:
+        W(f"- **{name}** — {basis}")
+    W()
 W("### How eligibility was determined\n")
 W("1. **Already-verified teams** cleared a full multi-benchmark judge run and qualify "
   "automatically — not re-run by the swag harness.")
