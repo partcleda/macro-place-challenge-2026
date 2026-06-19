@@ -20,7 +20,7 @@ readme = subprocess.run(["git", "show", f"{LB_REF}:README.md"], capture_output=T
 report = (ROOT / "swag_verify" / "REPORT.md").read_text()
 
 # Teams genuinely not-yet-run / pending (flagged; may still recover).
-RERUN = {"ICAS_placer", "Place, Route, Roll"}
+RERUN = {"ICAS_placer"}
 
 # Verdicts established THIS verification pass — override the leaderboard/report categorization.
 OVERRIDES = {
@@ -35,6 +35,8 @@ OVERRIDES = {
     "RuslanPlace":      ("✅ ELIGIBLE",   "RECOVERED — harness artifact (DREAMPlace had built CPU-only); rebuilt w/ CUDA + configure fix -> ibm01 VALID (0.9350)."),
     "ilovekiro":        ("❌ INELIGIBLE", "INVALID — DREAMPlace fails even in its own py3.10 env; returns the seed (69 overlaps). Confirmed via re-run."),
     "Combobulating":    ("❌ INELIGIBLE", "API drift — requires Benchmark.netlist_file/plc_file (not in current API); ships no own macro_place. Confirmed self-contained."),
+    "Place, Route, Roll":("✅ ELIGIBLE",   "RECOVERED — built team DREAMPlace from source (sm_89) + ran; ibm01 VALID (0.9223)"),
+    "ICAS_placer":      ("⏳ RE-RUNNING", "deep port — py3.8/cuda11 stack; DREAMPlace toolchain builds & basic cuda11 ops run on Ada, but full run needs from-source DREAMPlace + the py3.11 challenge harness (Python-version mismatch). Not yet verified."),
     "macrobossesiitp":  ("⏭️ SKIPPED",    "NEW form-only entry; repo unreachable even with judge token — cannot verify"),
     "MLforEDA":         ("❌ INELIGIBLE", "no place() entry (GNN/RL MaskPlace on ISPD-2005, not the challenge interface)"),
     "Wire We Even Here":("❌ INELIGIBLE", "py3.12-only f-string syntax in a py3.11 Dockerfile -> SyntaxError"),

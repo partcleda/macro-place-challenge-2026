@@ -7,9 +7,10 @@ _Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re
 ## Summary
 
 - **Total leaderboard teams:** 132
-- **Swag-eligible: 103**  =  37 verified (auto-qualify)  +  57 swag-verified (cohort)  +  9 recovered / newly-verified this pass
-- **Ineligible: 25**  =  22 failed the swag check  +  3 disqualified
+- **Swag-eligible: 104**  =  37 verified (auto-qualify)  +  57 swag-verified (cohort)  +  10 recovered / newly-verified this pass
+- **Ineligible: 23**  =  21 failed the swag check  +  2 disqualified
 - **Skipped (could not be run): 4**  (Modal-only / private / unreachable repo)
+- **Re-run in progress: 1**  (original failure was a harness artifact, not a code bug — not yet final)
 
 ### ✅ Changed to VALID this pass (recovered — were previously failed / DQ / unlisted)
 
@@ -21,6 +22,7 @@ _Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re
 - **Dragonfly** — RECOVERED — built team Dockerfile; ibm01 VALID (2757s)
 - **AxeCap** — NEW form-only entry; ibm01 VALID (1.2391)
 - **A-cat-suki** — NEW form-only entry; ibm01 VALID (1.3446)
+- **Place, Route, Roll** — RECOVERED — built team DREAMPlace from source (sm_89) + ran; ibm01 VALID (0.9223)
 - **BakaBobo** — RECOVERED — false DQ; ships macro_place.fast_proxy (overlay resolves it); ibm01 VALID (1.0109)
 
 ### How eligibility was determined
@@ -32,7 +34,7 @@ _Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re
 ### Caveats
 
 - **Recovered / newly-verified this pass.** Re-running teams in their declared environment recovered **Dragonfly** & **BakaBobo** (built their Dockerfile / overlaid the module they were wrongly failed for), plus 4 form-only submissions that were never previously ranked (**Macropolis, Nikunj Bhatt, AxeCap, A-cat-suki**) — all ibm01 VALID.
-- **Still pending.** Teams that ship a Dockerfile or hit challenge-API drift but aren't yet cleanly reproduced are flagged **⟳ PENDING RE-RUN** — a faithful re-run may move some to ✅: ICAS_placer, Place, Route, Roll. **macrobossesiitp** is unverifiable (repo unreachable).
+- **Still pending.** Teams that ship a Dockerfile or hit challenge-API drift but aren't yet cleanly reproduced are flagged **⟳ PENDING RE-RUN** — a faithful re-run may move some to ✅: ICAS_placer. **macrobossesiitp** is unverifiable (repo unreachable).
 - **A PASS-gate bug was fixed.** The gate matched `VALID` inside `INVALID`; three submissions the scorer marked INVALID (ilovekiro, Binghamton, SnoobQuants) had been mis-scored eligible and are now correctly ❌.
 - **`ibm01` only.** Single-benchmark minimum-functionality check, not the 17-benchmark ranking.
 
@@ -144,7 +146,7 @@ _Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re
 | 103 | AxeCap | ✅ ELIGIBLE | NEW form-only entry; ibm01 VALID (1.2391) |
 | 104 | RUDY Can't Fail | ✅ ELIGIBLE | verified — full judge run (avg proxy 1.5397) |
 | 105 | dbzero | ✅ ELIGIBLE | verified — full judge run (avg proxy 1.5680) |
-| 106 | ICAS_placer | ❌ INELIGIBLE | swag-checked (ibm01): FAIL_DP: rc=1 ImportError: cannot import name 'Params' from 'dreamplace' (unknown location  ⟳ PENDING RE-RUN (ships own Dockerfile / API-drift; may recover) |
+| 106 | ICAS_placer | ⏳ RE-RUNNING | deep port — py3.8/cuda11 stack; DREAMPlace toolchain builds & basic cuda11 ops run on Ada, but full run needs from-source DREAMPlace + the py3.11 challenge harness (Python-version mismatch). Not yet verified.  ⟳ PENDING RE-RUN (ships own Dockerfile / API-drift; may recover) |
 | 107 | The Sigma Boys | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=1.1579 |
 | 108 | UT Austin - RH | ⏭️ SKIPPED | no resolvable repo URL (profile link only / private) |
 | 109 | Besson-PLR | ❌ INELIGIBLE | swag-checked (ibm01): MISSING_DEP: macro_packer C++ ext does not build from their setup.py in eval env |
@@ -168,7 +170,7 @@ _Generated 2026-06-19. Leaderboard standings as of ref `origin/main` (Archgen re
 | 127 | Fayaaz | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=1.7954 |
 | 128 | The Sun Also Places Macros | ✅ ELIGIBLE | swag-checked (ibm01): PASS: ibm01 valid proxy=2.2944 |
 | 129 | SnoobQuants | ❌ INELIGIBLE | swag-checked (ibm01): INVALID: ibm01 INVALID (1 overlaps) — EmergencyShelfPlacer |
-| DQ | Place, Route, Roll | ❌ INELIGIBLE | disqualified — Judge run failed: DREAMPlace produced no usable placements for ibm01 (65 failed   ⟳ PENDING RE-RUN (ships own Dockerfile / API-drift; may recover) |
+| DQ | Place, Route, Roll | ✅ ELIGIBLE | RECOVERED — built team DREAMPlace from source (sm_89) + ran; ibm01 VALID (0.9223) |
 | DQ | Mike Gao | ❌ INELIGIBLE | disqualified — 1939 overlaps (old submission). Resubmitted 5/21 as "Place, Route, Roll". |
 | DQ | Archgen | ❌ INELIGIBLE | disqualified — 1 overlap on ibm17 (judge run). Judge AVG=1.0203. Resubmitted 5/21 (xplace+CD).  |
 | DQ | BakaBobo | ✅ ELIGIBLE | RECOVERED — false DQ; ships macro_place.fast_proxy (overlay resolves it); ibm01 VALID (1.0109) |
