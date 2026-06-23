@@ -22,7 +22,7 @@ Designs evaluated:
 - `ariane136` (public)
 - `mempool_tile` (public)
 - `nvdla` (public)
-- 1–2 hidden NG45 designs (to prevent overfitting)
+- `mempool_group` (hidden — full 4×4 mempool group, 324 hard macros, ~3373×3371 µm canvas)
 
 ---
 

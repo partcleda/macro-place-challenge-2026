@@ -63,6 +63,7 @@ def get_top_module_name(benchmark_name: str, verilog_file: Path) -> str:
         'mempool_tile_ng45': 'mempool_tile',
         'mempool_tile_asap7': 'mempool_tile',
         'bp_quad_ng45': 'black_parrot',
+        'mempool_group_ng45': 'mempool_group',
     }
 
     if benchmark_name in module_map:
@@ -254,10 +255,12 @@ def evaluate_benchmark(
     print(f"Evaluating: {benchmark_name}")
     print(f"{'='*80}")
 
-    # Load benchmark
+    # Load benchmark (check public then hidden directories)
     pt_file = Path(f"benchmarks/processed/public/{benchmark_name}.pt")
     if not pt_file.exists():
-        print(f"ERROR: {pt_file} not found")
+        pt_file = Path(f"benchmarks/processed/hidden/{benchmark_name}.pt")
+    if not pt_file.exists():
+        print(f"ERROR: {benchmark_name}.pt not found in public or hidden benchmark directories")
         return {'error': 'benchmark not found', 'benchmark': benchmark_name}
 
     benchmark = Benchmark.load(str(pt_file))
@@ -270,6 +273,7 @@ def evaluate_benchmark(
     # Map benchmark names to protobuf source directories
     source_dir_overrides = {
         'bp_quad': Path("external/MacroPlacement/CodeElements/SimulatedAnnealingGWTW/test/bp_ng45"),
+        'mempool_group': Path("external/MacroPlacement/CodeElements/SimulatedAnnealingGWTW/test/mempool_group_ng45"),
     }
 
     if source_name in source_dir_overrides:
@@ -371,6 +375,57 @@ set_input_delay -clock core_clock 0 [all_inputs]
 set_output_delay -clock core_clock 0 [all_outputs]
 """)
         print(f"  ✓ Generated ORFS config for nvdla (128 macros, fakeram45_256x64)")
+
+    # Generate ORFS config for mempool_group (hidden design — no upstream ORFS collateral)
+    if not orfs_config_dir.exists() and source_name == "mempool_group":
+        rtl_dir = Path("external/MacroPlacement/Testcases/mempool/rtl")
+        enable_dir = Path("external/MacroPlacement/Enablements/NanGate45")
+        flow_constraints = Path("external/MacroPlacement/Flows/NanGate45/mempool_group/constraints/mempool_group.sdc")
+
+        if not rtl_dir.exists():
+            print(f"  ERROR: mempool_group RTL not found at {rtl_dir}")
+            print("  Run: git submodule update --init external/MacroPlacement")
+            return {'error': 'mempool_group RTL missing', 'benchmark': benchmark_name}
+
+        orfs_config_dir.mkdir(parents=True, exist_ok=True)
+
+        # Copy SDC and fakeram LEF/LIB files (256x32 and 128x256 variants used by mempool_group)
+        shutil.copy(flow_constraints, orfs_config_dir / "constraint.sdc")
+        for variant in ["fakeram45_256x32", "fakeram45_128x256", "fakeram45_128x32", "fakeram45_64x64"]:
+            for ext in ["lef", "lib"]:
+                src = enable_dir / ext / f"{variant}.{ext}"
+                if src.exists():
+                    shutil.copy(src, orfs_config_dir)
+
+        # Write config.mk — synthesis runs from RTL in Testcases/mempool/rtl
+        (orfs_config_dir / "config.mk").write_text(f"""\
+export DESIGN_NICKNAME = mempool_group
+export DESIGN_NAME     = mempool_group
+export PLATFORM        = nangate45
+
+export VERILOG_FILES = $(shell find {rtl_dir.resolve()} -name "*.v" -o -name "*.sv")
+
+export SDC_FILE      = ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/constraint.sdc
+export ABC_CLOCK_PERIOD_IN_PS = 1000
+
+export ADDITIONAL_LEFS = \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_256x32.lef \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_128x256.lef \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_128x32.lef \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_64x64.lef
+
+export ADDITIONAL_LIBS = \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_256x32.lib \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_128x256.lib \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_128x32.lib \\
+    ./designs/$(PLATFORM)/$(DESIGN_NICKNAME)/fakeram45_64x64.lib
+
+export DIE_AREA  = 0.0 0.0 3383.52 3381.28
+export CORE_AREA = 5.13 5.04 3378.39 3376.24
+
+export PLACE_DENSITY_LB_ADDON ?= 0.10
+""")
+        print(f"  ✓ Generated ORFS config for mempool_group (324 hard macros)")
 
     # Fallback: check ORFS built-in designs (maps source_name to ORFS design name)
     orfs_builtin_map = {
@@ -743,6 +798,10 @@ def main():
                        help='Skip Yosys synthesis (use pre-synthesized netlist)')
     parser.add_argument('--placement', type=Path,
                        help='Path to placement tensor (.pt file) with shape [num_macros, 2]')
+    parser.add_argument('--hidden', action='store_true',
+                       help='Run hidden Tier 2 designs only (mempool_group_ng45)')
+    parser.add_argument('--tier2', action='store_true',
+                       help='Run all Tier 2 designs: 4 public NG45 + hidden (mempool_group_ng45)')
 
     args = parser.parse_args()
 
@@ -755,7 +814,14 @@ def main():
         return 1
 
     # Discover benchmarks
-    if args.all:
+    if args.tier2:
+        benchmarks = [
+            'ariane133_ng45', 'ariane136_ng45', 'nvdla_ng45', 'mempool_tile_ng45',
+            'mempool_group_ng45',
+        ]
+    elif args.hidden:
+        benchmarks = ['mempool_group_ng45']
+    elif args.all:
         benchmarks = [
             'ariane133_ng45', 'ariane136_ng45', 'bp_quad_ng45', 'nvdla_ng45', 'mempool_tile_ng45',
             'ariane136_asap7', 'nvdla_asap7', 'mempool_tile_asap7'
@@ -763,7 +829,7 @@ def main():
     elif args.benchmark:
         benchmarks = [args.benchmark]
     else:
-        print("ERROR: Specify --benchmark or --all")
+        print("ERROR: Specify --benchmark, --all, --hidden, or --tier2")
         return 1
 
     args.output.mkdir(parents=True, exist_ok=True)
