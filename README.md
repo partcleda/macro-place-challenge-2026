@@ -2,9 +2,47 @@
 
 <img src="assets/HRT.png" alt="Hudson River Trading" height="80"> &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; <img src="assets/partcl.png" alt="Partcl" height="80">
 
-**Win $20,000 by developing better macro placement algorithms!**
+Partcl and Hudson River Trading are excited to co-host a competition to solve the macro placement problem.
 
-Partcl and Hudson River Trading are excited to co-host a competition to solve the macro placement problem. 
+## 🎉 Announcing the Winners!
+
+Today, we're excited to announce the winners of the inaugural Partcl × Hudson River Trading Macro Placement Challenge!
+
+Macro placement remains one of the most challenging optimization problems in modern physical design. Every macro placement decision influences wirelength, congestion, timing, and ultimately the quality of the finished chip. Despite decades of research, efficiently producing high-quality placements continues to be an open problem at the intersection of optimization, algorithms, machine learning, and high-performance computing.
+
+To encourage new ideas from the broader systems community, Partcl and Hudson River Trading launched this challenge with ~$30,000 in prizes. Participants were free to develop any placement strategy — from simulated annealing to reinforcement learning, graph neural networks, evolutionary algorithms, and hybrid approaches.
+
+The response exceeded our expectations. The competition received **223 registrations**, with **132 verified eligible submissions**. During evaluation we saw an impressive diversity of ideas, including force-directed optimization, convex optimization, GPU-accelerated placers, learned policies, analytical methods, and entirely novel placement heuristics.
+
+### Winners
+
+**🥇 First Place: Archgen AI — "Archgen"**
+
+Archgen achieved the strongest overall performance among the finalists, consistently producing the best proxy cost across the benchmark suite. Their average proxy score for the ibm benchmarks was **0.9507**.
+
+**🥈 Runner-Up: Rishi Gottumukkala — "Carrotato"**
+
+Carrotato delivered an exceptionally competitive solution, finishing within a narrow margin of the winning submission while maintaining an efficient implementation with an average proxy cost of **0.9522**.
+
+**💡 Innovation Award: Arun Kumar — "ArzunPD"**
+
+While the Innovation Award is independent of leaderboard position, ArzunPD stood out for introducing one of the competition's most technically ambitious ideas: online machine learning inside the macro placement optimizer itself.
+
+### A Note on Proxy Metrics
+
+Final rankings were determined using the challenge's proxy cost metric. We believe this is an important result.
+
+Proxy metrics have become the standard objective in much of macro placement research because they are fast to compute and make large-scale experimentation practical. However, our results suggest that optimizing proxy objectives alone is not sufficient to produce production-ready macro placements.
+
+### Thank You
+
+We would like to thank everyone who participated. Building a competitive macro placer requires substantial engineering effort, and every submission contributed valuable ideas to the open physical design community.
+
+Thank you to our guest judge Patrick McEwen for his hard work and commitment to a fair judging process.
+
+We're especially grateful to Hudson River Trading for sponsoring this competition and supporting open research in EDA and high-performance computing.
+
+Thank You!
 
 ## About Macro Placement
 
