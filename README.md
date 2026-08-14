@@ -20,13 +20,19 @@ The response exceeded our expectations. The competition received **223 registrat
 
 Archgen achieved the strongest overall performance among the finalists, consistently producing the best proxy cost across the benchmark suite. Their average proxy score for the ibm benchmarks was **0.9507**.
 
+📂 Open-source implementation: [archgen-ai/Macro-Placement-challenge-2026](https://github.com/archgen-ai/Macro-Placement-challenge-2026)
+
 **🥈 Runner-Up: Rishi Gottumukkala — "Carrotato"**
 
 Carrotato delivered an exceptionally competitive solution, finishing within a narrow margin of the winning submission while maintaining an efficient implementation with an average proxy cost of **0.9522**.
 
+📂 Open-source implementation: [rishivg/AbuPlace](https://github.com/rishivg/AbuPlace) — GPU macro placer
+
 **💡 Innovation Award: Arun Kumar — "ArzunPD"**
 
 While the Innovation Award is independent of leaderboard position, ArzunPD stood out for introducing one of the competition's most technically ambitious ideas: online machine learning inside the macro placement optimizer itself.
+
+📂 Open-source implementation: [akumarc11/macro-weave](https://github.com/akumarc11/macro-weave)
 
 ### A Note on Proxy Metrics
 
