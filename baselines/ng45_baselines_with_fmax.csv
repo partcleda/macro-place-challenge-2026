@@ -1,0 +1,8 @@
+design,method,fmax_mhz,slack_ns,wns_ns,tns_ns,core_area_um2,wirelength_um,source
+ariane133,SA,262.4,0.189,0.000,0.000,2560080,3598577,TILOS paper (Innovus postRoute)
+ariane133,RePlAce,264.5,0.219,0.000,0.000,2560080,3456139,TILOS paper (Innovus postRoute)
+ariane136,RePlAce,272.0,0.324,0.000,0.000,2889201,3432693,TILOS paper (Innovus postRoute)
+mempool_tile,SA,250.0,0.000,0.000,0.000,774462,3659098,TILOS paper (Innovus postRoute)
+mempool_tile,RePlAce,250.0,0.000,0.000,0.000,774462,3469347,TILOS paper (Innovus postRoute)
+nvdla,SA,268.3,0.273,0.000,0.000,5443285,8660700,TILOS paper (Innovus postRoute)
+nvdla,RePlAce,266.8,0.252,0.000,0.000,5443285,8392045,TILOS paper (Innovus postRoute)
